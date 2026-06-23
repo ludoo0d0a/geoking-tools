@@ -3,7 +3,8 @@
     "id": "my-gcp-project-id",
     "name": "MyApp",
     "package": "fr.geoking.myapp",
-    "storageBucket": "my-gcp-project-id.firebasestorage.app"
+    "storageBucket": "my-gcp-project-id.firebasestorage.app",
+    "firebaseAndroidAppId": "1:PROJECT_NUMBER:android:APP_HASH"
   },
   "build": {
     "gradleModule": ":composeApp",

@@ -265,33 +265,27 @@ Test local : `python3 scripts/whatsnew.py 1`
 
 ---
 
-## 6. GitHub Actions (geoking-ci)
+## 6. GitHub Actions
 
-Pousse **geoking-ci** sur GitHub une fois.
+Les workflows tournent **dans le dépôt de l'app** (inline). GitHub Free ne permet pas
+`workflow_call` depuis un dépôt `geoking-ci` privé — on copie les YAML depuis les
+templates ; **[geoking-ci](https://github.com/ludoo0d0a/geoking-ci)** reste la référence
+canonique à synchroniser.
 
-**Repo privé** — avant le premier run CI, autorise l'accès aux workflows réutilisables :
-
-```bash
-gh api repos/ludoo0d0a/geoking-ci/actions/permissions/access -X PUT -f access_level=user
-```
-
-(Remplace `ludoo0d0a` si ton org/user diffère.) Sinon GitHub renvoie *workflow was not found* sur `uses: …/geoking-ci/…`.
-
-### `.github/workflows/android-ci.yml`
+### Bootstrap ou copie manuelle
 
 ```bash
-cp ../geoking-tools/templates/android-ci.yml .github/workflows/android-ci.yml
+mkdir -p .github/actions/setup-gradle .github/workflows
+cp ../geoking-tools/templates/setup-gradle/action.yml .github/actions/setup-gradle/
+cp ../geoking-tools/templates/android-ci.yml .github/workflows/
+cp ../geoking-tools/templates/release-play.yml .github/workflows/
 ```
 
-Édite `artifact_name` (ex. `myapp-debug-apk`). Les autres valeurs par défaut conviennent si le module est `:composeApp`.
+Édite `artifact_name` et `package_name` dans les workflows.
 
-### `.github/workflows/release-play.yml`
-
-```bash
-cp ../geoking-tools/templates/release-play.yml .github/workflows/release-play.yml
-```
-
-Édite `package_name: fr.geoking.myapp`.
+> **GitHub Team+** avec `geoking-ci` public ou partagé : tu peux utiliser
+> `uses: OWNER/geoking-ci/.github/workflows/android-ci.yml@main` à la place.
+> Voir [geoking-ci/README.md](https://github.com/ludoo0d0a/geoking-ci).
 
 ### Secrets GitHub (par dépôt app)
 
@@ -388,8 +382,7 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 | Symptôme | Piste |
 |---|---|
 | `geoking-tools introuvable` | Clone sibling ou `export GEOKING_TOOLS=…` |
-| CI : `workflow not found` | Repo `geoking-ci` privé : `gh api repos/OWNER/geoking-ci/actions/permissions/access -X PUT -f access_level=user` |
-| CI : `workflow not found` (autre) | Pousser `geoking-ci` sur GitHub ; vérifier `ludoo0d0a/geoking-ci@main` |
+| CI : `workflow not found` | GitHub Free + `geoking-ci` privé : utilise les workflows inline (`templates/`), pas `workflow_call` |
 | CI : `gradle: command not found` | Normal si pas de wrapper — geoking-ci provisionne Gradle 8.13 |
 | Google Sign-In échoue en local | SHA-1 debug manquant dans Firebase/GCP → `./scripts/verify-oauth.sh` |
 | Google Sign-In échoue sur Play | SHA-1 **App signing** (pas upload) dans Firebase → Play Console → Intégrité |
@@ -408,5 +401,6 @@ Tous dans `geoking-tools/templates/` :
 | `_geoking-wrapper.sh` | `scripts/_geoking-wrapper.sh` |
 | `script-stub.sh` | `scripts/<nom>.sh` (un par script) |
 | `whatsnew.py` | `scripts/whatsnew.py` |
+| `setup-gradle/action.yml` | `.github/actions/setup-gradle/action.yml` |
 | `android-ci.yml` | `.github/workflows/android-ci.yml` |
 | `release-play.yml` | `.github/workflows/release-play.yml` |

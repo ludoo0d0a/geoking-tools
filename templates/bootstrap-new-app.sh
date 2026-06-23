@@ -29,7 +29,7 @@ done
   exit 1
 }
 
-mkdir -p scripts .github/workflows
+mkdir -p scripts .github/workflows .github/actions/setup-gradle
 
 # --- scripts ---
 cp "$TOOLS/templates/_geoking-wrapper.sh" scripts/
@@ -59,6 +59,13 @@ else
 fi
 
 # --- CI ---
+if [ ! -f .github/actions/setup-gradle/action.yml ]; then
+  cp "$TOOLS/templates/setup-gradle/action.yml" .github/actions/setup-gradle/action.yml
+  echo "✓ .github/actions/setup-gradle"
+else
+  echo "· setup-gradle action existe déjà"
+fi
+
 if [ ! -f .github/workflows/android-ci.yml ]; then
   cp "$TOOLS/templates/android-ci.yml" .github/workflows/android-ci.yml
   echo "✓ .github/workflows/android-ci.yml — édite artifact_name"
@@ -114,5 +121,4 @@ echo "Prochaines étapes :"
 echo "  1. Édite scripts/project.manifest.json (URLs Firebase, GCP, Play)"
 echo "  2. Guide complet : $TOOLS/INTEGRATION.md"
 echo "  3. ./scripts/setup-release.sh"
-echo "  4. Pousse geoking-ci sur GitHub ; si repo privé :"
-echo "     gh api repos/OWNER/geoking-ci/actions/permissions/access -X PUT -f access_level=user"
+echo "  4. Sync workflows from geoking-ci when upgrading (templates/ in geoking-tools)"
