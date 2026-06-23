@@ -2,8 +2,8 @@
 # Terminal UI helpers for GeoKing scripts.
 set -euo pipefail
 
-[[ -n "${GEOKING_UI_LOADED:-}" ]] && return 0
-GEOKING_UI_LOADED=1
+[[ -n "${GK_UI_LOADED:-}" ]] && return 0
+GK_UI_LOADED=1
 
 c_reset=$'\033[0m'
 c_bold=$'\033[1m'

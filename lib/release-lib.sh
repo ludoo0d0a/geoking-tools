@@ -2,13 +2,15 @@
 # GeoKing — shared release / OAuth helpers (setup-release, verify-oauth, show-secrets).
 set -euo pipefail
 
-[[ -n "${GEOKING_LIB_LOADED:-}" ]] && return 0
-GEOKING_LIB_LOADED=1
+[[ -n "${GK_LIB_LOADED:-}" ]] && return 0
+GK_LIB_LOADED=1
 
 # shellcheck source=ui.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ui.sh"
+# shellcheck source=play-api.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/play-api.sh"
 
-geoking_lib_init() {
+gk_lib_init() {
   ROOT="$1"
   SCRIPTS="$ROOT/scripts"
   GS="$ROOT/${GOOGLE_SERVICES_REL:-composeApp/google-services.json}"
@@ -18,13 +20,13 @@ geoking_lib_init() {
   ALIAS="${KEY_ALIAS:-key0}"
 }
 
-geoking_sha1_debug() {
+gk_sha1_debug() {
   keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey \
     -storepass android -keypass android 2>/dev/null \
     | awk -F'SHA1: ' '/SHA1:/{print $2; exit}'
 }
 
-geoking_sha1_upload() {
+gk_sha1_upload() {
   local pass="${1:-}"
   [ -n "$pass" ] || { [ -f "$CRED" ] && pass="$(grep '^KEYSTORE_PASSWORD=' "$CRED" | cut -d= -f2-)"; }
   [ -n "$pass" ] && [ -f "$KS_PATH" ] || return 0
@@ -32,7 +34,7 @@ geoking_sha1_upload() {
     | awk -F'SHA1: ' '/SHA1:/{print $2; exit}'
 }
 
-geoking_print_sha1_guide() {
+gk_print_sha1_guide() {
   subhead "Empreintes SHA-1  ·  package $APP_ID"
   info_box \
     "Google autorise le sign-in seulement si le certificat qui a signé" \
@@ -43,7 +45,7 @@ geoking_print_sha1_guide() {
   show_link "Google Cloud" "$GCP_CREDENTIALS"
   blank
 
-  local d; d="$(geoking_sha1_debug)"
+  local d; d="$(gk_sha1_debug)"
   printf '  %s① DEBUG%s  %sAndroid Studio · Run / installDebug%s\n' "$c_bold" "$c_off" "$c_dim" "$c_off"
   if [ -n "$d" ]; then hint "SHA-1 : ${c_bold}${d}${c_off}"
   else warn "~/.android/debug.keystore absent — lance l'app une fois dans Android Studio"
@@ -52,14 +54,28 @@ geoking_print_sha1_guide() {
   blank
 
   printf '  %s② PLAY APP SIGNING%s  %s⚡ obligatoire Play Store%s\n' "$c_bold" "$c_off" "$c_warn" "$c_off"
-  hint "Copier : Intégrité de l'app → clé de signature de l'application"
-  show_link "Intégrité" "$PLAY_APP_INTEGRITY"
+  local p=""
+  if sa_file="$(gk_play_sa_json_path 2>/dev/null)"; then
+    p="$(gk_play_app_signing_sha1 2>/dev/null || true)"
+  fi
+  if [ -n "$p" ]; then
+    hint "SHA-1 (API Play) : ${c_bold}${p}${c_off}"
+    if gk_firebase_cli_ready && gk_firebase_sha_known "$p" 2>/dev/null; then
+      ok "Enregistré dans Firebase"
+    elif gk_firebase_cli_ready; then
+      warn "Absent de Firebase — ./scripts/setup-release.sh play-sha"
+    fi
+  else
+    hint "Auto : ./scripts/setup-release.sh play-sha (après 1ʳᵉ release Play)"
+    hint "Manuel : Play Console → App signing key certificate → Firebase"
+  fi
+  show_link "Play · App signing" "$PLAY_APP_INTEGRITY"
   show_link "Dashboard" "$PLAY_APP_DASHBOARD"
   show_link "Guide Google" "$PLAY_INTEGRITY_HELP"
   hint "Pas la clé d'upload — Google re-signe l'APK avant distribution."
   blank
 
-  local u; u="$(geoking_sha1_upload)"
+  local u; u="$(gk_sha1_upload)"
   printf '  %s③ UPLOAD KEY%s  %soptionnel · sideload release%s\n' "$c_bold" "$c_off" "$c_dim" "$c_off"
   if [ -n "$u" ]; then hint "SHA-1 : ${c_bold}${u}${c_off}"
   else hint "Généré par : ./scripts/setup-release.sh keystore"
@@ -68,7 +84,7 @@ geoking_print_sha1_guide() {
   info_box "Résumé : debug Studio → ①  |  Play Store → ②  |  les deux → ① + ②"
 }
 
-geoking_print_console_checklist() {
+gk_print_console_checklist() {
   subhead "Consoles utiles"
   show_link "GCP" "$GCP_CONSOLE"
   show_link "OAuth" "$GCP_CREDENTIALS"
@@ -81,7 +97,7 @@ geoking_print_console_checklist() {
   blank
 }
 
-geoking_print_logcat_help() {
+gk_print_logcat_help() {
   subhead "Test sur appareil"
   code "adb logcat -c && adb logcat -s ${SIGN_IN_LOG_TAG:-AppSignIn}"
   hint "Puis appuyer sur « Continuer avec Google » dans l'app."
@@ -93,7 +109,7 @@ geoking_print_logcat_help() {
   blank
 }
 
-geoking_adb_status() {
+gk_adb_status() {
   command -v adb >/dev/null 2>&1 && adb get-state >/dev/null 2>&1 || return 0
   subhead "Appareil USB connecté"
   if adb shell pm path "$APP_ID" >/dev/null 2>&1; then
@@ -109,7 +125,7 @@ gh_secret_present() {
   command -v gh >/dev/null 2>&1 && gh secret list 2>/dev/null | awk '{print $1}' | grep -qx "$1"
 }
 
-geoking_check_google_services() {
+gk_check_google_services() {
   if [ ! -f "$GS" ]; then
     fail "${GOOGLE_SERVICES_REL:-composeApp/google-services.json} manquant"
     hint "Place le fichier ici : $GS"
@@ -132,21 +148,21 @@ geoking_check_google_services() {
   return 0
 }
 
-geoking_require_google_services() {
-  if ! geoking_check_google_services; then
+gk_require_google_services() {
+  if ! gk_check_google_services; then
     blank
     die "Fichier requis : $GS"
   fi
 }
 
-geoking_push_google_services_secret() {
+gk_push_google_services_secret() {
   need gh
-  geoking_require_google_services
+  gk_require_google_services
   base64 < "$GS" | tr -d '\n' | gh secret set GOOGLE_SERVICES_JSON
   ok "Secret GitHub GOOGLE_SERVICES_JSON enregistré"
 }
 
-geoking_check_web_client_id() {
+gk_check_web_client_id() {
   if [ ! -f "$LP" ] || ! grep -q '^WEB_CLIENT_ID=' "$LP"; then
     fail "WEB_CLIENT_ID manquant dans local.properties"
     return 1
@@ -166,7 +182,7 @@ geoking_check_web_client_id() {
   return 0
 }
 
-geoking_check_ci_web_client_id() {
+gk_check_ci_web_client_id() {
   local workflow="$ROOT/.github/workflows/release-play.yml"
   if grep -q 'WEB_CLIENT_ID: \${{ secrets.WEB_CLIENT_ID }}' "$workflow" 2>/dev/null; then
     ok "Workflow release-play.yml injecte WEB_CLIENT_ID"
@@ -185,26 +201,29 @@ geoking_check_ci_web_client_id() {
   return 0
 }
 
-geoking_verify_oauth() {
+gk_verify_oauth() {
   head_ "🔐  Vérification Google Sign-In / Firebase Auth"
 
   subhead "Firebase"
-  geoking_check_google_services || true
+  gk_check_google_services || true
   if gh_secret_present GOOGLE_SERVICES_JSON; then ok "Secret GitHub GOOGLE_SERVICES_JSON"
   else warn "Secret GOOGLE_SERVICES_JSON absent (CI)"; fi
 
   subhead "OAuth · WEB_CLIENT_ID"
-  geoking_check_web_client_id || true
+  gk_check_web_client_id || true
   if gh_secret_present WEB_CLIENT_ID; then ok "Secret GitHub WEB_CLIENT_ID"
   else warn "Secret WEB_CLIENT_ID absent ou gh non connecté"; fi
 
   subhead "CI GitHub Actions"
-  geoking_check_ci_web_client_id || true
+  gk_check_ci_web_client_id || true
 
-  geoking_print_sha1_guide
-  geoking_print_console_checklist
-  geoking_print_logcat_help
-  geoking_adb_status
+  GK_SHA_SYNC_INTERACTIVE=false
+  gk_sync_all_sha_fingerprints
+
+  gk_print_sha1_guide
+  gk_print_console_checklist
+  gk_print_logcat_help
+  gk_adb_status
 }
 
 set_local_prop() {

@@ -3,13 +3,13 @@
 # GeoKing — assistant de configuration release (première fois ou reprise).
 #
 # Usage (via le wrapper scripts/ du projet) :
-#   ./scripts/setup-release.sh [all|keystore|play|firebase|oauth|gemini|secrets|verify]
+#   ./scripts/setup-release.sh [all|keystore|play|firebase|oauth|play-sha|gemini|secrets|verify]
 #
 set -euo pipefail
 
 # shellcheck source=../lib/project-env.sh
 . "$(cd "$(dirname "$0")/../lib" && pwd)/project-env.sh"
-geoking_project_init
+gk_project_init
 cd "$ROOT"
 
 # ---- étape 1 : keystore ----------------------------------------------------
@@ -50,7 +50,7 @@ step_keystore(){
   printf '%s' "$ALIAS" | gh secret set KEY_ALIAS
   printf '%s' "$PASS"  | gh secret set KEY_PASSWORD
   ok "Secrets KEYSTORE_* mis à jour sur GitHub"
-  local s; s="$(geoking_sha1_upload "$PASS")"
+  local s; s="$(gk_sha1_upload "$PASS")"
   [ -n "$s" ] && hint "SHA-1 upload (③) : ${c_bold}${s}${c_off}"
 }
 
@@ -73,7 +73,11 @@ step_play(){
     p="${p/#\~/$HOME}"
     [ -f "$p" ] || { warn "Fichier introuvable : $p"; return; }
     gh secret set PLAY_SERVICE_ACCOUNT_JSON < "$p"
+    umask 077
+    cp "$p" "$SCRIPTS/.play-service-account.json"
+    chmod 600 "$SCRIPTS/.play-service-account.json"
     ok "Secret PLAY_SERVICE_ACCOUNT_JSON enregistré"
+    ok "Copie locale → scripts/.play-service-account.json (gitignored)"
   else
     hint "Plus tard : gh secret set PLAY_SERVICE_ACCOUNT_JSON < fichier.json"
   fi
@@ -93,15 +97,17 @@ step_firebase(){
   step "Activer le fournisseur Google dans Authentication"
   show_url "$FIREBASE_AUTH_GOOGLE"
   step "Enregistrer les empreintes SHA-1"
-  geoking_print_sha1_guide
-  geoking_push_google_services_secret
+  gk_print_sha1_guide
+  gk_sync_all_sha_fingerprints
+  gk_push_google_services_secret
 }
 
 # ---- étape 4 : OAuth -------------------------------------------------------
 step_oauth(){
   head_ "🌐  4 · Connexion Google — OAuth"
   info_box "Vérifie Google Cloud ($PROJECT_ID) après l'étape Firebase."
-  geoking_print_sha1_guide
+  gk_print_sha1_guide
+  gk_sync_play_app_signing_sha || true
   step "Écran de consentement OAuth"
   show_url "$GCP_OAUTH_CONSENT"
   step "Identifiants OAuth (clients Android + Web)"
@@ -140,9 +146,10 @@ case "${1:-all}" in
   play)     step_play ;;
   firebase) step_firebase ;;
   oauth)    step_oauth ;;
+  play-sha) gk_sync_play_app_signing_sha ;;
   gemini)   step_gemini ;;
-  secrets)  "$GEOKING_TOOLS/bin/show-secrets.sh" ;;
-  verify)   geoking_verify_oauth ;;
+  secrets)  "$GK_TOOLS/bin/show-secrets.sh" ;;
+  verify)   gk_verify_oauth ;;
   all)
     head_ "🍷  Configuration release · $PROJECT_NAME"
     info_box \
@@ -153,17 +160,17 @@ case "${1:-all}" in
     step_keystore; step_play; step_firebase; step_oauth; step_gemini
     ;;
   *)
-    say "Usage : setup-release.sh [all|keystore|play|firebase|oauth|gemini|secrets|verify]"
+    say "Usage : setup-release.sh [all|keystore|play|firebase|oauth|play-sha|gemini|secrets|verify]"
     exit 2
     ;;
 esac
 
 case "${1:-all}" in
-  secrets|verify) exit 0 ;;
+  secrets|verify|play-sha) exit 0 ;;
 esac
 
 head_ "✅  Terminé"
-"$GEOKING_TOOLS/bin/show-secrets.sh"
+"$GK_TOOLS/bin/show-secrets.sh"
 blank
 info_box \
   "Prochaine étape : push sur main ou tag v* → CI → piste internal Play Store." \

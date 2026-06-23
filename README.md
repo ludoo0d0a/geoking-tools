@@ -25,7 +25,7 @@ Clone à côté de tes projets :
 └── scora/
 ```
 
-Ou : `export GEOKING_TOOLS=~/dev/android/geoking-tools`
+Ou : `export GK_TOOLS=~/dev/android/geoking-tools`
 
 Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets, CI).
 

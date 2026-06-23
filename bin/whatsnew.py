@@ -8,7 +8,7 @@ Usage: whatsnew.py [versionCode]
   - with a versionCode: emit that release's notes
   - without (or no match): emit the latest (first) <release>'s notes
 
-Requires GEOKING_PROJECT_ROOT or is invoked from a project wrapper that sets it.
+Requires GK_PROJECT_ROOT or is invoked from a project wrapper that sets it.
 """
 import os
 import sys
@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 
 
 def project_root() -> str:
-    root = os.environ.get("GEOKING_PROJECT_ROOT")
+    root = os.environ.get("GK_PROJECT_ROOT")
     if root:
         return root
     # Fallback when run directly from geoking-tools/bin with cwd in project.

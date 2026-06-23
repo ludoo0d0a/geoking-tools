@@ -5,10 +5,10 @@ import runpy
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.environ.setdefault("GEOKING_PROJECT_ROOT", ROOT)
+os.environ.setdefault("GK_PROJECT_ROOT", ROOT)
 
 for candidate in (
-    os.environ.get("GEOKING_TOOLS"),
+    os.environ.get("GK_TOOLS"),
     os.path.join(ROOT, "..", "geoking-tools"),
     os.path.expanduser("~/dev/android/geoking-tools"),
 ):
@@ -19,4 +19,4 @@ for candidate in (
             runpy.run_path(script, run_name="__main__")
             raise SystemExit(0)
 
-sys.exit("geoking-tools introuvable — clone ../geoking-tools ou exporte GEOKING_TOOLS")
+sys.exit("geoking-tools introuvable — clone ../geoking-tools ou exporte GK_TOOLS")

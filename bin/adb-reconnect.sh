@@ -11,7 +11,7 @@ set -euo pipefail
 
 # shellcheck source=../lib/project-env.sh
 . "$(cd "$(dirname "$0")/../lib" && pwd)/project-env.sh"
-geoking_project_init
+gk_project_init
 cd "$ROOT"
 
 INTERVAL=30
@@ -42,7 +42,7 @@ ADB="$(command -v adb 2>/dev/null || true)"
 [ -n "$ADB" ] || die "adb introuvable."
 
 # shellcheck source=adb-wireless.sh
-source "$GEOKING_TOOLS/bin/adb-wireless.sh"
+source "$GK_TOOLS/bin/adb-wireless.sh"
 
 TARGET="$(adb_wireless_resolve_target "$TARGET")"
 [ -n "$TARGET" ] || die "Cible manquante. Passe IP:PORT ou -s pour enregistrer."

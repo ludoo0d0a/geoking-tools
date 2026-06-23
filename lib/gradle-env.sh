@@ -2,12 +2,12 @@
 # JDK + Gradle resolution for local builds.
 set -euo pipefail
 
-[[ -n "${GEOKING_GRADLE_ENV_LOADED:-}" ]] && return 0
-GEOKING_GRADLE_ENV_LOADED=1
+[[ -n "${GK_GRADLE_ENV_LOADED:-}" ]] && return 0
+GK_GRADLE_ENV_LOADED=1
 
 JAVA_VERSION="${JAVA_VERSION:-21}"
 
-geoking_resolve_java_home() {
+gk_resolve_java_home() {
   if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/javac" ]; then
     return 0
   fi
@@ -23,7 +23,7 @@ geoking_resolve_java_home() {
   export JAVA_HOME
 }
 
-geoking_resolve_gradle() {
+gk_resolve_gradle() {
   local root="$1"
   if [ -x "$root/gradlew" ]; then
     GRADLE=("$root/gradlew")
@@ -37,10 +37,10 @@ geoking_resolve_gradle() {
   GRADLE=("$g")
 }
 
-geoking_setup_build_env() {
+gk_setup_build_env() {
   local root="$1"
-  geoking_resolve_java_home || die "JDK introuvable. Définis JAVA_HOME (JDK $JAVA_VERSION)."
+  gk_resolve_java_home || die "JDK introuvable. Définis JAVA_HOME (JDK $JAVA_VERSION)."
   ok "JDK : $JAVA_HOME"
-  geoking_resolve_gradle "$root" || die "Gradle introuvable. Lance 'gradle wrapper --gradle-version 8.13' ou ouvre le projet dans Android Studio."
+  gk_resolve_gradle "$root" || die "Gradle introuvable. Lance 'gradle wrapper --gradle-version 8.13' ou ouvre le projet dans Android Studio."
   ok "Gradle : ${GRADLE[*]}"
 }

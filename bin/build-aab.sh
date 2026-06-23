@@ -12,7 +12,7 @@ set -euo pipefail
 . "$(cd "$(dirname "$0")/../lib" && pwd)/project-env.sh"
 # shellcheck source=../lib/gradle-env.sh
 . "$(cd "$(dirname "$0")/../lib" && pwd)/gradle-env.sh"
-geoking_project_init
+gk_project_init
 cd "$ROOT"
 
 [ -f "$KS_PATH" ]   || die "release.keystore introuvable à la racine du projet."
@@ -28,7 +28,7 @@ EXPECT_SHA1="$(keytool -list -v -keystore "$KS_PATH" -alias "$KEY_ALIAS" -storep
 printf 'Clé de signature : alias %s%s%s — SHA1 attendu %s%s%s\n' \
   "$c_bold" "$KEY_ALIAS" "$c_off" "$c_bold" "$EXPECT_SHA1" "$c_off"
 
-geoking_setup_build_env "$ROOT"
+gk_setup_build_env "$ROOT"
 
 [ -n "${1:-}" ] && export VERSION_CODE="$1"
 [ -n "${2:-}" ] && export VERSION_NAME="$2"

@@ -14,7 +14,7 @@ set -euo pipefail
 . "$(cd "$(dirname "$0")/../lib" && pwd)/project-env.sh"
 # shellcheck source=../lib/gradle-env.sh
 . "$(cd "$(dirname "$0")/../lib" && pwd)/gradle-env.sh"
-geoking_project_init
+gk_project_init
 cd "$ROOT"
 
 LAUNCH_ACTIVITY="${LAUNCH_ACTIVITY:?manifest build.mainActivity requis}"
@@ -95,7 +95,7 @@ if [ "$LAUNCH" -lt 0 ]; then
   esac
 fi
 
-geoking_setup_build_env "$ROOT"
+gk_setup_build_env "$ROOT"
 
 MODULE_PATH="${GRADLE_MODULE#:}"
 GRADLE_TASK="${GRADLE_MODULE}:assembleDebug"
@@ -115,7 +115,7 @@ ADB="$(command -v adb 2>/dev/null || true)"
 [ -n "$ADB" ] || die "adb introuvable."
 
 # shellcheck source=adb-wireless.sh
-source "$GEOKING_TOOLS/bin/adb-wireless.sh"
+source "$GK_TOOLS/bin/adb-wireless.sh"
 
 WIRELESS_TARGET="$(adb_wireless_resolve_target "$DEVICE")"
 if [ -n "$WIRELESS_TARGET" ]; then

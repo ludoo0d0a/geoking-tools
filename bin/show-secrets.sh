@@ -9,7 +9,7 @@ set -euo pipefail
 
 # shellcheck source=../lib/project-env.sh
 . "$(cd "$(dirname "$0")/../lib" && pwd)/project-env.sh"
-geoking_project_init
+gk_project_init
 cd "$ROOT"
 
 REDACT=false
@@ -79,7 +79,7 @@ if [ -f "$KS_PATH" ]; then
   ALIAS="$(cred_prop KEY_ALIAS)"
   SHA1=""
   if [ -n "$PASS" ] && [ -n "$ALIAS" ]; then
-    SHA1="$(geoking_sha1_upload "$PASS")"
+    SHA1="$(gk_sha1_upload "$PASS")"
   fi
   secret_row "KEYSTORE_BASE64" "release.keystore" "$(wc -c < "$KS_PATH" | tr -d ' ') o · SHA-1: ${SHA1:-?}" "$(gh_has KEYSTORE_BASE64)"
 else
@@ -91,7 +91,7 @@ secret_row "KEY_PASSWORD" ".keystore-credentials" "$(cred_prop KEY_PASSWORD)" "$
 
 subhead "Play Console API"
 PLAY_JSON=""
-for candidate in "$ROOT"/secrets/*play*.json "$ROOT"/secrets/*service*.json; do
+for candidate in "$SCRIPTS/.play-service-account.json" "$ROOT"/secrets/*play*.json "$ROOT"/secrets/*service*.json; do
   [ -f "$candidate" ] || continue
   PLAY_JSON="$candidate"
   break

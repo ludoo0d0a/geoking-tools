@@ -37,7 +37,7 @@ Puis complète `scripts/project.manifest.json` et lance `./scripts/setup-release
 └── my-new-app/         # ← ton nouveau projet
 ```
 
-Alternative : `export GEOKING_TOOLS=~/chemin/vers/geoking-tools` si le clone n'est pas sibling.
+Alternative : `export GK_TOOLS=~/chemin/vers/geoking-tools` si le clone n'est pas sibling.
 
 ---
 
@@ -381,7 +381,7 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 
 | Symptôme | Piste |
 |---|---|
-| `geoking-tools introuvable` | Clone sibling ou `export GEOKING_TOOLS=…` |
+| `geoking-tools introuvable` | Clone sibling ou `export GK_TOOLS=…` |
 | CI : `workflow not found` | GitHub Free + `geoking-ci` privé : utilise les workflows inline (`templates/`), pas `workflow_call` |
 | CI : `gradle: command not found` | Normal si pas de wrapper — geoking-ci provisionne Gradle 8.13 |
 | Google Sign-In échoue en local | SHA-1 debug manquant dans Firebase/GCP → `./scripts/verify-oauth.sh` |

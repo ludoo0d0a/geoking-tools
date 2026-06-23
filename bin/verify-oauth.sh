@@ -5,7 +5,7 @@ set -euo pipefail
 
 # shellcheck source=../lib/project-env.sh
 . "$(cd "$(dirname "$0")/../lib" && pwd)/project-env.sh"
-geoking_project_init
+gk_project_init
 cd "$ROOT"
 
-geoking_verify_oauth
+gk_verify_oauth
