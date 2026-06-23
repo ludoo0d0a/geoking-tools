@@ -170,6 +170,62 @@ cf_list_records() {
   cf_api_json GET "/zones/${zone_id}/dns_records?per_page=500"
 }
 
+cf_normalize_content() {
+  local type="$1"
+  local content="$2"
+  case "$type" in
+    MX)  printf '%s' "${content%.}" ;;
+    TXT)
+      content="${content#\"}"
+      content="${content%\"}"
+      printf '%s' "$content"
+      ;;
+    *)   printf '%s' "$content" ;;
+  esac
+}
+
+cf_find_service_record_id() {
+  local zone_id="$1"
+  local type="$2"
+  local name="$3"
+  local content="$4"
+  local priority="${5:-0}"
+  local full_name normalized
+  if [ "$name" = "@" ]; then
+    full_name="$GEOKING_DOMAIN"
+  else
+    full_name="${name}.${GEOKING_DOMAIN}"
+  fi
+  normalized="$(cf_normalize_content "$type" "$content")"
+  cf_list_records "$zone_id" | jq -r --arg type "$type" --arg name "$full_name" \
+    --arg norm "$normalized" --argjson pri "$priority" '
+    [.result[] | select(.name == $name and .type == $type) |
+      if $type == "MX" then
+        select((.content | rtrimstr(".")) == $norm and .priority == $pri)
+      else
+        select((.content | gsub("^\"|\"$"; "")) == $norm)
+      end
+    | .id] | first // empty
+  '
+}
+
+cf_cleanup_quoted_txt_duplicates() {
+  local zone_id="$1"
+  local full_name="$GEOKING_DOMAIN"
+  local rows
+  rows="$(cf_records_at_name "$zone_id" "$full_name")"
+  echo "$rows" | jq -c '.[] | select(.type == "TXT")' | while IFS= read -r row; do
+    local id content
+    id="$(echo "$row" | jq -r '.id')"
+    content="$(echo "$row" | jq -r '.content')"
+    case "$content" in
+      \"*\")
+        cf_delete_record "$zone_id" "$id" "TXT duplicate ${content}"
+        ;;
+    esac
+  done
+}
+
 cf_find_record_id() {
   local zone_id="$1"
   local type="$2"
@@ -194,6 +250,63 @@ cf_find_record_id() {
   fi
 }
 
+cf_records_at_name() {
+  local zone_id="$1"
+  local full_name="$2"
+  cf_list_records "$zone_id" | jq -c --arg name "$full_name" '[.result[] | select(.name == $name)]'
+}
+
+cf_delete_record() {
+  local zone_id="$1"
+  local record_id="$2"
+  local label="$3"
+  if [ "$DRY_RUN" = true ]; then
+    echo "    would DELETE ${label} (${record_id})" >&2
+    return 0
+  fi
+  cf_api_json DELETE "/zones/${zone_id}/dns_records/${record_id}" >/dev/null
+  echo "    deleted ${label}" >&2
+}
+
+# Remove A/AAAA/CNAME at a hostname before creating a Pages CNAME (imported Netlify A records block CNAME).
+cf_prepare_pages_cname() {
+  local zone_id="$1"
+  local name="$2"
+  local content="$3"
+  local full_name
+  if [ "$name" = "@" ]; then
+    full_name="$GEOKING_DOMAIN"
+  else
+    full_name="${name}.${GEOKING_DOMAIN}"
+  fi
+
+  local rows
+  rows="$(cf_records_at_name "$zone_id" "$full_name")"
+  local existing_cname
+  existing_cname="$(echo "$rows" | jq -r --arg content "$content" '
+    [.[] | select(.type == "CNAME" and .content == $content) | .id] | first // empty
+  ')"
+  if [ -n "$existing_cname" ]; then
+    printf '%s' "$existing_cname"
+    return 0
+  fi
+
+  while IFS= read -r row; do
+    [ -z "$row" ] && continue
+    local id rtype rcontent
+    id="$(echo "$row" | jq -r '.id')"
+    rtype="$(echo "$row" | jq -r '.type')"
+    rcontent="$(echo "$row" | jq -r '.content')"
+    case "$rtype" in
+      A|AAAA|CNAME)
+        cf_delete_record "$zone_id" "$id" "${rtype} → ${rcontent}"
+        ;;
+    esac
+  done < <(echo "$rows" | jq -c '.[]')
+
+  printf ''
+}
+
 cf_upsert_record() {
   local zone_id="$1"
   local type="$2"
@@ -210,8 +323,17 @@ cf_upsert_record() {
     full_name="${name}.${GEOKING_DOMAIN}"
   fi
 
-  local existing_id
-  existing_id="$(cf_find_record_id "$zone_id" "$type" "$name" "$content")"
+  local existing_id=""
+  local normalized_content
+  normalized_content="$(cf_normalize_content "$type" "$content")"
+  if [ "$type" = "CNAME" ] && [ "$proxied" = true ]; then
+    existing_id="$(cf_prepare_pages_cname "$zone_id" "$name" "$content")"
+  elif [ "$type" = "MX" ] || [ "$type" = "TXT" ]; then
+    existing_id="$(cf_find_service_record_id "$zone_id" "$type" "$name" "$content" "${priority:-0}")"
+    content="$normalized_content"
+  else
+    existing_id="$(cf_find_record_id "$zone_id" "$type" "$name" "$content")"
+  fi
 
   local payload
   if [ "$type" = "MX" ]; then
@@ -231,18 +353,18 @@ cf_upsert_record() {
   echo "  ${type} ${name} → ${content}"
 
   if [ "$DRY_RUN" = true ]; then
-    [ -n "$existing_id" ] && echo "    would PATCH ${existing_id}" || echo "    would POST"
+    [ -n "$existing_id" ] && echo "    would skip (exists ${existing_id})" || echo "    would POST"
+    return 0
+  fi
+
+  if [ -n "$existing_id" ]; then
+    echo "    skip: already exists (${existing_id})"
     return 0
   fi
 
   local resp
-  if [ -n "$existing_id" ]; then
-    resp="$(cf_api_json PATCH "/zones/${zone_id}/dns_records/${existing_id}" "$payload")"
-    echo "    updated ${existing_id}"
-  else
-    resp="$(cf_api_json POST "/zones/${zone_id}/dns_records" "$payload")"
-    echo "    created $(echo "$resp" | jq -r '.result.id')"
-  fi
+  resp="$(cf_api_json POST "/zones/${zone_id}/dns_records" "$payload")"
+  echo "    created $(echo "$resp" | jq -r '.result.id')"
 
   if ! echo "$resp" | jq -e '.success == true' >/dev/null; then
     echo "$resp" | jq '.' >&2
@@ -275,6 +397,7 @@ cmd_apply() {
 
   echo
   echo "Service records (MX/TXT):"
+  cf_cleanup_quoted_txt_duplicates "$zone_id"
   plan_apex_service_records | while IFS= read -r row; do
     [ -z "$row" ] && continue
     local fqdn cf_name type value ttl priority
