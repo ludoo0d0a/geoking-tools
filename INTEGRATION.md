@@ -265,27 +265,22 @@ Test local : `python3 scripts/whatsnew.py 1`
 
 ---
 
-## 6. GitHub Actions
+## 6. GitHub Actions (geoking-ci)
 
-Les workflows tournent **dans le dépôt de l'app** (inline). GitHub Free ne permet pas
-`workflow_call` depuis un dépôt `geoking-ci` privé — on copie les YAML depuis les
-templates ; **[geoking-ci](https://github.com/ludoo0d0a/geoking-ci)** reste la référence
-canonique à synchroniser.
+Les workflows de l'app sont des **appels fins** vers
+**[geoking-ci](https://github.com/ludoo0d0a/geoking-ci)** (dépôt **public** requis pour
+`workflow_call` sur GitHub Free).
 
-### Bootstrap ou copie manuelle
+### Copie des templates
 
 ```bash
-mkdir -p .github/actions/setup-gradle .github/workflows
-cp ../geoking-tools/templates/setup-gradle/action.yml .github/actions/setup-gradle/
 cp ../geoking-tools/templates/android-ci.yml .github/workflows/
 cp ../geoking-tools/templates/release-play.yml .github/workflows/
 ```
 
-Édite `artifact_name` et `package_name` dans les workflows.
+Édite `artifact_name` et `package_name`.
 
-> **GitHub Team+** avec `geoking-ci` public ou partagé : tu peux utiliser
-> `uses: OWNER/geoking-ci/.github/workflows/android-ci.yml@main` à la place.
-> Voir [geoking-ci/README.md](https://github.com/ludoo0d0a/geoking-ci).
+Chaque app ne contient que ~15 lignes YAML ; la logique build/release vit dans geoking-ci.
 
 ### Secrets GitHub (par dépôt app)
 
@@ -382,7 +377,7 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 | Symptôme | Piste |
 |---|---|
 | `geoking-tools introuvable` | Clone sibling ou `export GK_TOOLS=…` |
-| CI : `workflow not found` | GitHub Free + `geoking-ci` privé : utilise les workflows inline (`templates/`), pas `workflow_call` |
+| CI : `workflow not found` | `geoking-ci` doit être **public** (ou Team+ avec accès partagé) |
 | CI : `gradle: command not found` | Normal si pas de wrapper — geoking-ci provisionne Gradle 8.13 |
 | Google Sign-In échoue en local | SHA-1 debug manquant dans Firebase/GCP → `./scripts/verify-oauth.sh` |
 | Google Sign-In échoue sur Play | SHA-1 **App signing** (pas upload) dans Firebase → Play Console → Intégrité |
@@ -401,6 +396,5 @@ Tous dans `geoking-tools/templates/` :
 | `_geoking-wrapper.sh` | `scripts/_geoking-wrapper.sh` |
 | `script-stub.sh` | `scripts/<nom>.sh` (un par script) |
 | `whatsnew.py` | `scripts/whatsnew.py` |
-| `setup-gradle/action.yml` | `.github/actions/setup-gradle/action.yml` |
 | `android-ci.yml` | `.github/workflows/android-ci.yml` |
 | `release-play.yml` | `.github/workflows/release-play.yml` |
