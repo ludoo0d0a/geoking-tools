@@ -20,7 +20,8 @@
       "repo": "gaston",
       "dns": {
         "subdomain": "gaston",
-        "pagesProject": "gaston"
+        "pagesProject": "gaston",
+        "pagesHost": "gaston-eep.pages.dev"
       }
     },
     {
@@ -31,7 +32,8 @@
       "repo": "julius",
       "dns": {
         "subdomain": "julius",
-        "pagesProject": "julius"
+        "pagesProject": "julius",
+        "pagesHost": "julius-aga.pages.dev"
       }
     },
     {
@@ -51,7 +53,8 @@
       "repo": "ludoo-portfolio",
       "dns": {
         "subdomain": "portfolio",
-        "pagesProject": "portfolio"
+        "pagesProject": "portfolio",
+        "pagesHost": "portfolio-9vx.pages.dev"
       }
     },
     {
