@@ -1,0 +1,32 @@
+name: Release to Play Store
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play Store track'
+        default: internal
+        type: choice
+        options: [ internal, alpha, beta, production ]
+      changesNotSentForReview:
+        description: 'Skip auto-review (only for brand-new apps before first Console review)'
+        default: false
+        type: boolean
+
+concurrency:
+  group: play-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: ludoo0d0a/geoking-ci/.github/workflows/release-play.yml@main
+    with:
+      package_name: fr.geoking.MYAPP   # ← remplacer
+      is_workflow_dispatch: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+      workflow_dispatch_track: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.track || '' }}
+      workflow_dispatch_skip_review: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.changesNotSentForReview && 'true' || 'false' }}
+      version_name_override: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+    secrets: inherit

@@ -2,7 +2,19 @@
 
 Scripts partagés pour les apps Android GeoKing (release Play, OAuth, adb, build local).
 
-## Installation
+> **Nouvelle app ?** → **[INTEGRATION.md](INTEGRATION.md)** (guide pas-à-pas complet)
+
+## Bootstrap rapide
+
+Depuis la racine de ton app (sibling de `geoking-tools`) :
+
+```bash
+../geoking-tools/templates/bootstrap-new-app.sh --package fr.geoking.myapp --name MyApp
+```
+
+Crée `scripts/`, les wrappers, les workflows CI, `playstore/` minimal et les entrées `.gitignore`.
+
+## Installation manuelle
 
 Clone à côté de tes projets :
 
@@ -13,30 +25,9 @@ Clone à côté de tes projets :
 └── scora/
 ```
 
-Ou exporte le chemin :
+Ou : `export GEOKING_TOOLS=~/dev/android/geoking-tools`
 
-```bash
-export GEOKING_TOOLS=~/dev/android/geoking-tools
-```
-
-## Intégration dans un projet
-
-1. Copie `templates/project.manifest.json` → `scripts/project.manifest.json` et remplis les IDs/URLs.
-2. Copie les wrappers depuis `templates/script-wrapper.sh` pour chaque script, ou symlink :
-
-```bash
-for s in setup-release show-secrets verify-oauth gen-keystore build-aab deploy-device adb-reconnect; do
-  cp templates/script-wrapper.sh "scripts/$s.sh"
-done
-chmod +x scripts/*.sh
-```
-
-3. Ajoute au `.gitignore` du projet :
-
-```
-scripts/.keystore-credentials
-scripts/.adb-wireless
-```
+Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets, CI).
 
 ## Scripts
 
@@ -51,10 +42,16 @@ scripts/.adb-wireless
 | `adb-reconnect.sh` | Boucle reconnexion adb sans fil |
 | `whatsnew.py` | Génère `playstore/whatsnew/` depuis `whatsnew.xml` |
 
-## Manifest
+## Templates
 
-`scripts/project.manifest.json` est la source de vérité par projet (package, URLs consoles, module Gradle, activité de lancement). Chargé automatiquement via `lib/manifest.sh`.
+| Fichier | Usage |
+|---|---|
+| `templates/bootstrap-new-app.sh` | Scaffold automatique dans une app |
+| `templates/project.manifest.json` | Manifest exemple |
+| `templates/android-ci.yml` | Workflow CI debug |
+| `templates/release-play.yml` | Workflow release Play |
+| `INTEGRATION.md` | Guide d'intégration complet |
 
 ## CI
 
-Les workflows GitHub Actions vivent dans le dépôt sibling **[geoking-ci](../geoking-ci)**.
+Workflows réutilisables dans **[geoking-ci](https://github.com/ludoo0d0a/geoking-ci)** — voir [INTEGRATION.md §6](INTEGRATION.md#6-github-actions-geoking-ci).

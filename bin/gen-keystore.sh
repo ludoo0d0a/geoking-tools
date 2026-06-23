@@ -12,7 +12,7 @@ set -euo pipefail
 geoking_project_init
 cd "$ROOT"
 
-command -v keytool >/dev/null 2>&1 || die "keytool introuvable — installe un JDK (ex. Temurin 17)."
+command -v keytool >/dev/null 2>&1 || die "keytool introuvable — installe un JDK (ex. Temurin 21)."
 
 if [ -f "$KS_PATH" ]; then
   fail "$KS_PATH existe déjà — refus d'écraser la clé de signature."

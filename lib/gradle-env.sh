@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# JDK 17 + Gradle resolution for local builds.
+# JDK + Gradle resolution for local builds.
 set -euo pipefail
 
 [[ -n "${GEOKING_GRADLE_ENV_LOADED:-}" ]] && return 0
 GEOKING_GRADLE_ENV_LOADED=1
 
+JAVA_VERSION="${JAVA_VERSION:-21}"
+
 geoking_resolve_java_home() {
   if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/javac" ]; then
     return 0
   fi
-  JAVA_HOME="$(/usr/libexec/java_home -v 17 2>/dev/null || true)"
+  JAVA_HOME="$(/usr/libexec/java_home -v "$JAVA_VERSION" 2>/dev/null || true)"
   if [ -z "${JAVA_HOME:-}" ]; then
     local j
     for j in "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
@@ -37,7 +39,7 @@ geoking_resolve_gradle() {
 
 geoking_setup_build_env() {
   local root="$1"
-  geoking_resolve_java_home || die "JDK introuvable. Définis JAVA_HOME (JDK 17)."
+  geoking_resolve_java_home || die "JDK introuvable. Définis JAVA_HOME (JDK $JAVA_VERSION)."
   ok "JDK : $JAVA_HOME"
   geoking_resolve_gradle "$root" || die "Gradle introuvable. Lance 'gradle wrapper --gradle-version 8.13' ou ouvre le projet dans Android Studio."
   ok "Gradle : ${GRADLE[*]}"
