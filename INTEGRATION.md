@@ -61,7 +61,7 @@ Crée `scripts/project.manifest.json` — source de vérité pour package, conso
 Copie le template :
 
 ```bash
-cp ../geoking-tools/templates/project.manifest.json scripts/project.manifest.json
+cp ../geoking-tools/templates/project.manifest.template.json scripts/project.manifest.json
 ```
 
 ### Champs obligatoires
@@ -95,7 +95,7 @@ Depuis la racine de ton app :
 
 ```bash
 mkdir -p scripts
-cp ../geoking-tools/templates/project.manifest.json scripts/
+cp ../geoking-tools/templates/project.manifest.template.json scripts/
 cp ../geoking-tools/templates/_geoking-wrapper.sh scripts/
 cp ../geoking-tools/templates/whatsnew.py scripts/
 
@@ -392,7 +392,7 @@ Tous dans `geoking-tools/templates/` :
 
 | Fichier | Destination dans l'app |
 |---|---|
-| `project.manifest.json` | `scripts/project.manifest.json` |
+| `project.manifest.template.json` | `scripts/project.manifest.json` |
 | `_geoking-wrapper.sh` | `scripts/_geoking-wrapper.sh` |
 | `script-stub.sh` | `scripts/<nom>.sh` (un par script) |
 | `whatsnew.py` | `scripts/whatsnew.py` |

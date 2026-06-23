@@ -41,16 +41,44 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `deploy-device.sh` | Build APK + install sur appareil |
 | `adb-reconnect.sh` | Boucle reconnexion adb sans fil |
 | `whatsnew.py` | Génère `playstore/whatsnew/` depuis `whatsnew.xml` |
+| `migrate-geoking-dns.sh` | Migration DNS Netlify → Cloudflare Pages (`geoking.fr`) |
+| `cutover-cloudflare-dns.sh` | Phase 3 : zone Cloudflare DNS + domaines Pages + NS |
 
 ## Templates
 
 | Fichier | Usage |
 |---|---|
 | `templates/bootstrap-new-app.sh` | Scaffold automatique dans une app |
-| `templates/project.manifest.json` | Manifest exemple |
+| `templates/project.manifest.json` | Catalogue projets GeoKing (DNS, repos) |
+| `templates/project.manifest.template.json` | Manifest exemple pour une nouvelle app |
 | `templates/android-ci.yml` | Workflow CI debug |
 | `templates/release-play.yml` | Workflow release Play |
 | `INTEGRATION.md` | Guide d'intégration complet |
+
+## DNS geoking.fr (Netlify → Cloudflare)
+
+- **Projets** : `templates/project.manifest.json` (`dns.subdomain`, `dns.pagesProject`)
+- **Référence Netlify** : `geoking.fr (DNS Records).csv` (export Netlify → cibles `*.netlify.app`, rollback)
+
+Ré-exporter le CSV depuis Netlify après tout changement DNS manuel.
+
+```bash
+# Tokens lus depuis local.properties (NETLIFY_TOKEN, CLOUDFLARE_*)
+./scripts/migrate-geoking-dns.sh reference
+./scripts/migrate-geoking-dns.sh status
+./scripts/migrate-geoking-dns.sh migrate --site vincent --dry-run
+./scripts/migrate-geoking-dns.sh migrate --all --verify
+```
+
+### Phase 3 — Zone Cloudflare (avant/après cutover NS)
+
+Prérequis : `geoking.fr` ajouté dans Cloudflare.
+
+```bash
+./scripts/cutover-cloudflare-dns.sh plan
+./scripts/cutover-cloudflare-dns.sh apply-all --dry-run
+./scripts/cutover-cloudflare-dns.sh nameservers
+```
 
 ## CI
 

@@ -47,7 +47,7 @@ cp "$TOOLS/templates/netlify-ignore.sh" scripts/
 chmod +x scripts/netlify-ignore.sh
 
 if [ ! -f scripts/project.manifest.json ]; then
-  cp "$TOOLS/templates/project.manifest.json" scripts/project.manifest.json
+  cp "$TOOLS/templates/project.manifest.template.json" scripts/project.manifest.json
   if [ -n "$PACKAGE" ]; then
     command -v jq >/dev/null 2>&1 || { echo "jq requis pour --package" >&2; exit 1; }
     tmp="$(mktemp)"

@@ -1,0 +1,45 @@
+{
+  "project": {
+    "id": "my-gcp-project-id",
+    "name": "MyApp",
+    "package": "fr.geoking.myapp",
+    "storageBucket": "my-gcp-project-id.firebasestorage.app",
+    "firebaseAndroidAppId": "1:PROJECT_NUMBER:android:APP_HASH"
+  },
+  "build": {
+    "gradleModule": ":composeApp",
+    "googleServices": "composeApp/google-services.json",
+    "keystoreAlias": "key0",
+    "keystoreDn": "CN=MyApp, OU=GeoKing, O=GeoKing, L=Paris, C=FR",
+    "mainActivity": ".MainActivity",
+    "signInLogTag": "MyAppSignIn"
+  },
+  "urls": {
+    "firebase": {
+      "console": "https://console.firebase.google.com/project/my-gcp-project-id/",
+      "settings": "https://console.firebase.google.com/project/my-gcp-project-id/settings/general",
+      "authProviders": "https://console.firebase.google.com/project/my-gcp-project-id/authentication/providers",
+      "authUsers": "https://console.firebase.google.com/project/my-gcp-project-id/authentication/users"
+    },
+    "gcp": {
+      "console": "https://console.cloud.google.com/welcome?project=my-gcp-project-id",
+      "credentials": "https://console.cloud.google.com/apis/credentials?project=my-gcp-project-id",
+      "oauthConsent": "https://console.cloud.google.com/apis/credentials/consent?project=my-gcp-project-id",
+      "playDeveloperApi": "https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com?project=my-gcp-project-id",
+      "serviceAccounts": "https://console.cloud.google.com/iam-admin/serviceaccounts?project=my-gcp-project-id"
+    },
+    "play": {
+      "developerId": "PLAY_DEVELOPER_ID",
+      "appId": "PLAY_APP_ID",
+      "dashboard": "https://play.google.com/console/u/0/developers/PLAY_DEVELOPER_ID/app/PLAY_APP_ID/app-dashboard",
+      "integrity": "https://play.google.com/console/u/0/developers/PLAY_DEVELOPER_ID/app/PLAY_APP_ID/keymanagement",
+      "integrityHelp": "https://support.google.com/googleplay/android-developer/answer/9842756?hl=fr"
+    },
+    "gemini": {
+      "apiKeys": "https://aistudio.google.com/apikey"
+    },
+    "github": {
+      "actionsSecrets": "https://github.com/settings/secrets/actions"
+    }
+  }
+}
