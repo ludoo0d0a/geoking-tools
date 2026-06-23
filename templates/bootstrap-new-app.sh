@@ -43,6 +43,9 @@ done
 cp "$TOOLS/templates/whatsnew.py" scripts/
 chmod +x scripts/whatsnew.py
 
+cp "$TOOLS/templates/netlify-ignore.sh" scripts/
+chmod +x scripts/netlify-ignore.sh
+
 if [ ! -f scripts/project.manifest.json ]; then
   cp "$TOOLS/templates/project.manifest.json" scripts/project.manifest.json
   if [ -n "$PACKAGE" ]; then
