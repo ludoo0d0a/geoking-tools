@@ -267,7 +267,15 @@ Test local : `python3 scripts/whatsnew.py 1`
 
 ## 6. GitHub Actions (geoking-ci)
 
-Pousse **geoking-ci** sur GitHub une fois (repo public ou privé accessible à tes apps).
+Pousse **geoking-ci** sur GitHub une fois.
+
+**Repo privé** — avant le premier run CI, autorise l'accès aux workflows réutilisables :
+
+```bash
+gh api repos/ludoo0d0a/geoking-ci/actions/permissions/access -X PUT -f access_level=user
+```
+
+(Remplace `ludoo0d0a` si ton org/user diffère.) Sinon GitHub renvoie *workflow was not found* sur `uses: …/geoking-ci/…`.
 
 ### `.github/workflows/android-ci.yml`
 
@@ -380,7 +388,8 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 | Symptôme | Piste |
 |---|---|
 | `geoking-tools introuvable` | Clone sibling ou `export GEOKING_TOOLS=…` |
-| CI : `workflow not found` | Pousser `geoking-ci` sur GitHub ; vérifier `ludoo0d0a/geoking-ci@main` |
+| CI : `workflow not found` | Repo `geoking-ci` privé : `gh api repos/OWNER/geoking-ci/actions/permissions/access -X PUT -f access_level=user` |
+| CI : `workflow not found` (autre) | Pousser `geoking-ci` sur GitHub ; vérifier `ludoo0d0a/geoking-ci@main` |
 | CI : `gradle: command not found` | Normal si pas de wrapper — geoking-ci provisionne Gradle 8.13 |
 | Google Sign-In échoue en local | SHA-1 debug manquant dans Firebase/GCP → `./scripts/verify-oauth.sh` |
 | Google Sign-In échoue sur Play | SHA-1 **App signing** (pas upload) dans Firebase → Play Console → Intégrité |
