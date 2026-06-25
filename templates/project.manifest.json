@@ -76,6 +76,36 @@
         "subdomain": "www",
         "pagesProject": "geoking"
       }
+    },
+    {
+      "id": "logbookcreator",
+      "name": "Logbook Creator",
+      "type": "website",
+      "repo": "logbookcreator",
+      "dns": {
+        "subdomain": "log",
+        "aliases": ["logbook"],
+        "pagesProject": "logbookcreator",
+        "pagesHost": "logbookcreator.pages.dev"
+      }
+    },
+    {
+      "id": "scora-landingpage",
+      "name": "Scora Landing Page",
+      "type": "website",
+      "repo": "scora-landingpage",
+      "domain": "scorawatch.com",
+      "build": {
+        "command": "npm ci && npm run build",
+        "output": "dist",
+        "nodeVersion": "20"
+      },
+      "dns": {
+        "zone": "scorawatch.com",
+        "subdomain": "www",
+        "apex": true,
+        "pagesProject": "scora-landingpage"
+      }
     }
   ]
 }
