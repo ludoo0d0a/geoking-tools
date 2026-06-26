@@ -186,6 +186,24 @@ gk_firebase_android_app_id() {
   return 1
 }
 
+# Android Firebase app ID: manifest → existing google-services.json → live `apps:list`.
+gk_firebase_android_app_id_resolve() {
+  local id
+  id="$(gk_firebase_android_app_id 2>/dev/null || true)"
+  if [ -n "$id" ] && [ "$id" != null ]; then printf '%s' "$id"; return 0; fi
+  gk_firebase_cli_ready || return 1
+  firebase apps:list ANDROID --project "$PROJECT_ID" 2>/dev/null \
+    | grep -oiE '1:[0-9]+:android:[0-9a-f]+' | head -1
+}
+
+# Web OAuth client (client_type 3) from a google-services.json (defaults to $GS).
+gk_web_client_id_from_gs() {
+  local f="${1:-$GS}"
+  [ -f "$f" ] && command -v jq >/dev/null 2>&1 || return 1
+  jq -r '.client[0].oauth_client[]? | select(.client_type == 3) | .client_id' "$f" \
+    | grep -m1 '.'
+}
+
 gk_firebase_cli_ready() {
   local list
   command -v firebase >/dev/null 2>&1 || return 1

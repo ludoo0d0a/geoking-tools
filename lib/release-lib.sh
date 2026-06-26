@@ -162,6 +162,18 @@ gk_push_google_services_secret() {
   ok "Secret GitHub GOOGLE_SERVICES_JSON enregistré"
 }
 
+# Push WEB_CLIENT_ID to GitHub. Uses the passed value, else local.properties.
+gk_push_web_client_id_secret() {
+  need gh
+  local web="${1:-}"
+  if [ -z "$web" ] && [ -f "$LP" ]; then
+    web="$(grep '^WEB_CLIENT_ID=' "$LP" | cut -d= -f2- || true)"
+  fi
+  [ -n "$web" ] || { warn "WEB_CLIENT_ID introuvable — secret non poussé"; return 1; }
+  printf '%s' "$web" | gh secret set WEB_CLIENT_ID
+  ok "Secret GitHub WEB_CLIENT_ID enregistré (…${web##*-})"
+}
+
 gk_check_web_client_id() {
   if [ ! -f "$LP" ] || ! grep -q '^WEB_CLIENT_ID=' "$LP"; then
     fail "WEB_CLIENT_ID manquant dans local.properties"
@@ -232,4 +244,73 @@ set_local_prop() {
   if grep -q "^$key=" "$f"; then sedi -E "s#^$key=.*#$key=$val#" "$f"
   else printf '%s=%s\n' "$key" "$val" >> "$f"; fi
   ok "$key → local.properties"
+}
+
+# Download the authoritative google-services.json from Firebase (CLI), validate the
+# package, sync WEB_CLIENT_ID into local.properties. Never hand-edits the JSON.
+# Set GK_PULL_PUSH_SECRET=true to also push the GOOGLE_SERVICES_JSON GitHub secret.
+gk_pull_google_services() {
+  head_ "⬇️  google-services.json — téléchargement depuis Firebase"
+  need firebase
+  need jq
+  if ! gk_firebase_cli_ready; then
+    fail "Firebase CLI non connecté — lance : ${c_bold}firebase login${c_off}"
+    show_url "https://firebase.google.com/docs/cli#install-cli"
+    return 1
+  fi
+  [ -n "${PROJECT_ID:-}" ] && [ "$PROJECT_ID" != null ] \
+    || die "PROJECT_ID manquant — renseigne .project.id dans scripts/project.manifest.json"
+
+  local app_id
+  app_id="$(gk_firebase_android_app_id_resolve)" \
+    || die "App Android Firebase introuvable dans le projet $PROJECT_ID"
+  step "Projet $PROJECT_ID · app $app_id"
+
+  # `firebase apps:sdkconfig --out` refuse d'écraser → on écrit dans un dossier neuf.
+  local tmpd; tmpd="$(mktemp -d "${TMPDIR:-/tmp}/geoking-gs-XXXXXX")"
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmpd'" RETURN
+  local tmp="$tmpd/google-services.json"
+  firebase apps:sdkconfig ANDROID "$app_id" --project "$PROJECT_ID" --out "$tmp" >/dev/null 2>&1 \
+    || die "Échec du téléchargement (firebase apps:sdkconfig ANDROID $app_id)"
+  jq -e . "$tmp" >/dev/null 2>&1 || die "JSON invalide reçu de Firebase"
+
+  local pkg; pkg="$(jq -r '.client[0].client_info.android_client_info.package_name // empty' "$tmp")"
+  if [ -n "${APP_ID:-}" ] && [ -n "$pkg" ] && [ "$pkg" != "$APP_ID" ]; then
+    die "Package « $pkg » ≠ « $APP_ID » attendu — mauvais projet/app ?"
+  fi
+
+  mkdir -p "$(dirname "$GS")"
+  if [ -f "$GS" ] && cmp -s "$tmp" "$GS"; then
+    ok "$GOOGLE_SERVICES_REL déjà à jour"
+  else
+    if [ -f "$GS" ]; then
+      cp "$GS" "$GS.bak"
+      hint "Ancien fichier sauvegardé → ${GOOGLE_SERVICES_REL}.bak"
+    fi
+    mv "$tmp" "$GS"
+    ok "google-services.json téléchargé → $GOOGLE_SERVICES_REL"
+  fi
+
+  local web; web="$(gk_web_client_id_from_gs "$GS" || true)"
+  if [ -n "$web" ]; then
+    local cur=""
+    [ -f "$LP" ] && cur="$(grep '^WEB_CLIENT_ID=' "$LP" | cut -d= -f2- || true)"
+    if [ "$cur" = "$web" ]; then ok "WEB_CLIENT_ID déjà synchronisé (…${web##*-})"
+    else set_local_prop WEB_CLIENT_ID "$web"; fi
+  else
+    warn "Client Web (client_type 3) absent — active Google dans Firebase Auth"
+    show_link "Auth Google" "${FIREBASE_AUTH_GOOGLE:-}"
+  fi
+
+  if [ "${GK_PULL_PUSH_SECRET:-false}" = true ]; then
+    if command -v gh >/dev/null 2>&1; then
+      subhead "Synchronisation secrets GitHub"
+      gk_push_google_services_secret || true
+      gk_push_web_client_id_secret "$web" || true
+    else
+      warn "gh CLI absente — secrets GitHub non synchronisés (brew install gh)"
+    fi
+  fi
+  return 0
 }

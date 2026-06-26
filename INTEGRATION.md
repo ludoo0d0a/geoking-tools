@@ -99,7 +99,7 @@ cp ../geoking-tools/templates/project.manifest.template.json scripts/
 cp ../geoking-tools/templates/_geoking-wrapper.sh scripts/
 cp ../geoking-tools/templates/whatsnew.py scripts/
 
-for s in setup-release show-secrets verify-oauth gen-keystore build-aab deploy-device adb-reconnect; do
+for s in setup-release show-secrets verify-oauth pull-google-services gen-keystore build-aab deploy-device adb-reconnect; do
   cp "../geoking-tools/templates/script-stub.sh" "scripts/$s.sh"
 done
 
@@ -115,6 +115,7 @@ my-new-app/scripts/
 ├── setup-release.sh         # stub → geoking-tools/bin/setup-release.sh
 ├── show-secrets.sh
 ├── verify-oauth.sh
+├── pull-google-services.sh  # télécharge google-services.json depuis Firebase
 ├── gen-keystore.sh
 ├── build-aab.sh
 ├── deploy-device.sh
@@ -125,8 +126,9 @@ my-new-app/scripts/
 ### Test
 
 ```bash
-./scripts/verify-oauth.sh    # après avoir placé google-services.json
-./scripts/setup-release.sh   # wizard complet (keystore, Play, Firebase…)
+./scripts/pull-google-services.sh  # télécharge google-services.json (firebase login requis)
+./scripts/verify-oauth.sh          # après avoir placé google-services.json
+./scripts/setup-release.sh         # wizard complet (keystore, Play, Firebase…)
 ```
 
 ---
@@ -316,7 +318,7 @@ Chaque app ne contient que ~15 lignes YAML ; la logique build/release vit dans g
 
 ## 7. Première release — ordre recommandé
 
-1. **Firebase** — créer le projet, ajouter l'app Android (`package`), télécharger `google-services.json` → `composeApp/`
+1. **Firebase** — créer le projet, ajouter l'app Android (`package`), puis `firebase login` + `./scripts/pull-google-services.sh` (télécharge `google-services.json` → `composeApp/` et synchronise `WEB_CLIENT_ID`)
 2. **Keystore** — `./scripts/setup-release.sh keystore` (ou `gen-keystore.sh --gh`)
 3. **Play Console** — créer l'app, noter `developerId` + `appId` dans le manifest
 4. **Compte de service** — `./scripts/setup-release.sh play`
@@ -331,6 +333,7 @@ Chaque app ne contient que ~15 lignes YAML ; la logique build/release vit dans g
 
 | Commande | Quand l'utiliser |
 |---|---|
+| `./scripts/pull-google-services.sh` | Télécharge `google-services.json` depuis Firebase (CLI) + synchronise `WEB_CLIENT_ID` dans `local.properties`. Ajoute `--push` (ou `GK_PULL_PUSH_SECRET=true`) pour pousser aussi les secrets GitHub `GOOGLE_SERVICES_JSON` + `WEB_CLIENT_ID`. Alias : `setup-release.sh config` |
 | `./scripts/deploy-device.sh` | Build + install sur téléphone (USB ou Wi-Fi adb) |
 | `./scripts/adb-reconnect.sh -s IP:5555` | Garder adb sans fil actif pendant le dev |
 | `./scripts/build-aab.sh` | AAB signé local + vérif empreinte avant upload manuel |
@@ -380,6 +383,7 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 | CI : `workflow not found` | `geoking-ci` doit être **public** (ou Team+ avec accès partagé) |
 | CI : `gradle: command not found` | Normal si pas de wrapper — geoking-ci provisionne Gradle 8.13 |
 | Google Sign-In échoue en local | SHA-1 debug manquant dans Firebase/GCP → `./scripts/verify-oauth.sh` |
+| Sign-In : `aucun jeton Google reçu` / `WEB_CLIENT_ID` obsolète | `google-services.json` périmé → `./scripts/pull-google-services.sh` (re-télécharge + resynchronise `WEB_CLIENT_ID`) |
 | Google Sign-In échoue sur Play | SHA-1 **App signing** (pas upload) dans Firebase → Play Console → Intégrité |
 | `release-play.yml n'injecte PAS WEB_CLIENT_ID` | Le workflow doit utiliser `geoking-ci` avec `secrets: inherit` |
 | AAB rejeté (signature) | `./scripts/build-aab.sh` compare l'empreinte avant upload |

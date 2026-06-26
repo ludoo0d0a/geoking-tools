@@ -35,7 +35,7 @@ mkdir -p scripts .github/workflows
 cp "$TOOLS/templates/_geoking-wrapper.sh" scripts/
 chmod +x scripts/_geoking-wrapper.sh
 
-for s in setup-release show-secrets verify-oauth gen-keystore build-aab deploy-device adb-reconnect; do
+for s in setup-release show-secrets verify-oauth pull-google-services gen-keystore build-aab deploy-device adb-reconnect; do
   printf '#!/usr/bin/env bash\nGK_SCRIPT=%s.sh exec "$(dirname "$0")/_geoking-wrapper.sh" "$@"\n' "$s" > "scripts/$s.sh"
   chmod +x "scripts/$s.sh"
 done

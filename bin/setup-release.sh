@@ -3,7 +3,7 @@
 # GeoKing — assistant de configuration release (première fois ou reprise).
 #
 # Usage (via le wrapper scripts/ du projet) :
-#   ./scripts/setup-release.sh [all|keystore|play|firebase|oauth|play-sha|gemini|secrets|verify]
+#   ./scripts/setup-release.sh [all|keystore|play|firebase|oauth|config|play-sha|gemini|secrets|verify]
 #
 set -euo pipefail
 
@@ -92,8 +92,13 @@ step_firebase(){
     "Projet $PROJECT_ID · package $APP_ID"
   show_link "Users connectés" "$FIREBASE_AUTH_USERS"
   blank
-  step "Télécharger google-services.json → placer dans le chemin ci-dessus"
-  show_url "$FIREBASE_PROJECT"
+  if gk_firebase_cli_ready; then
+    gk_pull_google_services || warn "Téléchargement auto impossible — récupère le fichier manuellement"
+  else
+    step "Télécharger google-services.json → placer dans le chemin ci-dessus"
+    show_url "$FIREBASE_PROJECT"
+    hint "Auto : firebase login puis ./scripts/setup-release.sh config"
+  fi
   step "Activer le fournisseur Google dans Authentication"
   show_url "$FIREBASE_AUTH_GOOGLE"
   step "Enregistrer les empreintes SHA-1"
@@ -146,6 +151,7 @@ case "${1:-all}" in
   play)     step_play ;;
   firebase) step_firebase ;;
   oauth)    step_oauth ;;
+  config)   gk_pull_google_services ;;
   play-sha) gk_sync_play_app_signing_sha ;;
   gemini)   step_gemini ;;
   secrets)  "$GK_TOOLS/bin/show-secrets.sh" ;;
@@ -160,13 +166,13 @@ case "${1:-all}" in
     step_keystore; step_play; step_firebase; step_oauth; step_gemini
     ;;
   *)
-    say "Usage : setup-release.sh [all|keystore|play|firebase|oauth|play-sha|gemini|secrets|verify]"
+    say "Usage : setup-release.sh [all|keystore|play|firebase|oauth|config|play-sha|gemini|secrets|verify]"
     exit 2
     ;;
 esac
 
 case "${1:-all}" in
-  secrets|verify|play-sha) exit 0 ;;
+  secrets|verify|play-sha|config) exit 0 ;;
 esac
 
 head_ "✅  Terminé"
