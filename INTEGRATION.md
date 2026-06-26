@@ -329,6 +329,21 @@ Chaque app ne contient que ~15 lignes YAML ; la logique build/release vit dans g
 
 ---
 
+## 7bis. Clients OAuth — Android (type 1) vs Web (type 3)
+
+Le Google Sign-In a besoin des **deux** types de clients OAuth dans le projet Firebase ; mais le **code** n'utilise que le client **Web**.
+
+| `client_type` | Client | Rôle | Lié à | Utilisé dans le code ? |
+|---|---|---|---|---|
+| `1` | **Android** | Autorise l'app/l'appareil à demander une connexion Google | `package_name` + **SHA-1** | Non — Google reconnaît l'app via sa signature |
+| `3` | **Web** (« server client ID ») | Audience du jeton d'identité que Firebase vérifie | rien de physique (ID serveur) | **Oui** — `setServerClientId(...)` / `default_web_client_id` / `WEB_CLIENT_ID` |
+
+- `WEB_CLIENT_ID` (local.properties, BuildConfig, secret CI) = **toujours le client Web (type 3)**, jamais l'Android.
+- Enregistre **un client type 1 par empreinte** : SHA-1 debug, SHA-1 upload, et surtout SHA-1 **Play App Signing** (sinon le sign-in casse sur le Play Store alors qu'il marche en debug).
+- Panne classique : un `google-services.json` qui ne contient qu'un client type 3 (ou le mauvais) et aucun type 1 → « aucun jeton Google reçu » / `signInWithCredential` échoue. Correctif : `./scripts/pull-google-services.sh` re-télécharge le fichier avec tous les clients + resynchronise `WEB_CLIENT_ID`.
+
+---
+
 ## 8. Scripts locaux utiles
 
 | Commande | Quand l'utiliser |
