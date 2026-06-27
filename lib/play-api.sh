@@ -147,6 +147,13 @@ gk_sha1_from_apk() {
     | awk -F'SHA1: ' '/SHA1:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}'
 }
 
+gk_sha256_from_apk() {
+  local apk="$1"
+  need keytool
+  keytool -printcert -jarfile "$apk" 2>/dev/null \
+    | awk -F'SHA256: ' '/SHA256:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}'
+}
+
 gk_play_app_signing_sha1() {
   local token="${1:-}"
   local version_code="${2:-}"
@@ -172,6 +179,38 @@ gk_play_app_signing_sha1() {
   sha1="$(gk_sha1_from_apk "$tmp_apk")"
   [ -n "$sha1" ] || return 1
   gk_sha_format_colons "$sha1"
+}
+
+# Download the Play App Signing universal APK once and print both fingerprints,
+# colon-formatted, on a single line: "<SHA-1> <SHA-256>". Empty on failure.
+gk_play_app_signing_fps() {
+  local token="${1:-}" version_code="${2:-}"
+  local sa_file apk_json download_id tmp_apk sha1 sha256
+
+  if [ -z "$token" ]; then
+    sa_file="$(gk_play_sa_json_path)" || return 1
+    token="$(gk_google_sa_access_token "$sa_file")" || return 1
+  fi
+  if [ -z "$version_code" ]; then
+    version_code="$(gk_play_latest_version_code "$token")" || return 1
+  fi
+  apk_json="$(gk_play_generated_apks_json "$token" "$version_code")" || return 1
+  download_id="$(gk_play_universal_apk_download_id "$apk_json")"
+  [ -n "$download_id" ] || return 1
+
+  tmp_apk="$(mktemp "${TMPDIR:-/tmp}/geoking-play-XXXXXX.apk")"
+  # shellcheck disable=SC2064
+  trap "rm -f '$tmp_apk'" RETURN
+  gk_play_download_universal_apk "$token" "$version_code" "$download_id" "$tmp_apk"
+  sha1="$(gk_sha1_from_apk "$tmp_apk")"
+  sha256="$(gk_sha256_from_apk "$tmp_apk")"
+  [ -n "$sha1" ] || return 1
+  printf '%s %s' "$(gk_sha_format_colons "$sha1")" "$(gk_sha_format_colons "$sha256")"
+}
+
+gk_play_app_signing_sha256() {
+  local fps; fps="$(gk_play_app_signing_fps "$@")" || return 1
+  printf '%s' "${fps#* }"
 }
 
 gk_firebase_android_app_id() {

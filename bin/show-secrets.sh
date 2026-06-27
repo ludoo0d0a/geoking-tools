@@ -78,10 +78,14 @@ if [ -f "$KS_PATH" ]; then
   PASS="$(cred_prop KEYSTORE_PASSWORD)"
   ALIAS="$(cred_prop KEY_ALIAS)"
   SHA1=""
+  SHA256=""
   if [ -n "$PASS" ] && [ -n "$ALIAS" ]; then
     SHA1="$(gk_sha1_upload "$PASS")"
+    SHA256="$(gk_sha256_upload "$PASS")"
   fi
   secret_row "KEYSTORE_BASE64" "release.keystore" "$(wc -c < "$KS_PATH" | tr -d ' ') o · SHA-1: ${SHA1:-?}" "$(gh_has KEYSTORE_BASE64)"
+  [ -n "$SHA256" ] && hint "Upload SHA-256 : ${c_bold}${SHA256}${c_off}"
+  hint "SHA App Signing (build distribué par Play, CI) : ./scripts/setup-release.sh verify"
 else
   secret_row "KEYSTORE_BASE64" "release.keystore" "" "$(gh_has KEYSTORE_BASE64)"
 fi
@@ -102,6 +106,12 @@ if [ -n "$PLAY_JSON" ] && command -v jq >/dev/null 2>&1; then
 else
   secret_row "PLAY_SERVICE_ACCOUNT_JSON" "(JSON local absent)" "(GitHub seulement)" "$(gh_has PLAY_SERVICE_ACCOUNT_JSON)"
 fi
+
+subhead "Cloudflare · Worker IA (proxy Gemini)"
+secret_row "CLOUDFLARE_API_TOKEN" "local.properties" "$(local_prop CLOUDFLARE_API_TOKEN)" "$(gh_has CLOUDFLARE_API_TOKEN)"
+secret_row "CLOUDFLARE_ACCOUNT_ID" "local.properties" "$(local_prop CLOUDFLARE_ACCOUNT_ID)" "$(gh_has CLOUDFLARE_ACCOUNT_ID)"
+secret_row "AI_PROXY_URL" "local.properties" "$(local_prop AI_PROXY_URL)" "$(gh_has AI_PROXY_URL)"
+hint "GEMINI_API_KEY est aussi un Worker Secret (wrangler) — ./scripts/setup-ai-proxy.sh"
 
 subhead "Secrets enregistrés sur GitHub"
 if command -v gh >/dev/null 2>&1; then

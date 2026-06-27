@@ -50,6 +50,10 @@ gk_manifest_load() {
   gk_manifest_export GEMINI_API_KEYS "$(gk_manifest_jq "$json" '.urls.gemini.apiKeys // "https://aistudio.google.com/apikey"')"
   gk_manifest_export GITHUB_ACTIONS_SECRETS "$(gk_manifest_jq "$json" '.urls.github.actionsSecrets // "https://github.com/settings/secrets/actions"')"
 
+  gk_manifest_export CF_WORKER_NAME "$(gk_manifest_jq "$json" '.cloudflare.workerName // empty')"
+  gk_manifest_export CF_KV_BINDING "$(gk_manifest_jq "$json" '.cloudflare.kvBinding // "AI_KV"')"
+  gk_manifest_export CF_WORKER_URL "$(gk_manifest_jq "$json" '.urls.worker // empty')"
+
   gk_manifest_export GRADLE_MODULE "$(gk_manifest_jq "$json" '.build.gradleModule // ":composeApp"')"
   gk_manifest_export GOOGLE_SERVICES_REL "$(gk_manifest_jq "$json" '.build.googleServices // "composeApp/google-services.json"')"
   gk_manifest_export KEY_ALIAS "$(gk_manifest_jq "$json" '.build.keystoreAlias // "key0"')"

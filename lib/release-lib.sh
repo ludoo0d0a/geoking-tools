@@ -34,6 +34,20 @@ gk_sha1_upload() {
     | awk -F'SHA1: ' '/SHA1:/{print $2; exit}'
 }
 
+gk_sha256_debug() {
+  keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey \
+    -storepass android -keypass android 2>/dev/null \
+    | awk -F'SHA256: ' '/SHA256:/{print $2; exit}'
+}
+
+gk_sha256_upload() {
+  local pass="${1:-}"
+  [ -n "$pass" ] || { [ -f "$CRED" ] && pass="$(grep '^KEYSTORE_PASSWORD=' "$CRED" | cut -d= -f2-)"; }
+  [ -n "$pass" ] && [ -f "$KS_PATH" ] || return 0
+  keytool -list -v -keystore "$KS_PATH" -alias "$ALIAS" -storepass "$pass" 2>/dev/null \
+    | awk -F'SHA256: ' '/SHA256:/{print $2; exit}'
+}
+
 gk_print_sha1_guide() {
   subhead "Empreintes SHA-1  ·  package $APP_ID"
   info_box \
@@ -46,20 +60,25 @@ gk_print_sha1_guide() {
   blank
 
   local d; d="$(gk_sha1_debug)"
+  local d256; d256="$(gk_sha256_debug)"
   printf '  %s① DEBUG%s  %sAndroid Studio · Run / installDebug%s\n' "$c_bold" "$c_off" "$c_dim" "$c_off"
-  if [ -n "$d" ]; then hint "SHA-1 : ${c_bold}${d}${c_off}"
+  if [ -n "$d" ]; then
+    hint "SHA-1   : ${c_bold}${d}${c_off}"
+    [ -n "$d256" ] && hint "SHA-256 : ${c_bold}${d256}${c_off}"
   else warn "~/.android/debug.keystore absent — lance l'app une fois dans Android Studio"
   fi
   hint "Si le sign-in échoue en local uniquement."
   blank
 
-  printf '  %s② PLAY APP SIGNING%s  %s⚡ obligatoire Play Store%s\n' "$c_bold" "$c_off" "$c_warn" "$c_off"
-  local p=""
+  printf '  %s② PLAY APP SIGNING%s  %s⚡ obligatoire Play Store · App Check Play Integrity%s\n' "$c_bold" "$c_off" "$c_warn" "$c_off"
+  local p="" p256=""
   if sa_file="$(gk_play_sa_json_path 2>/dev/null)"; then
-    p="$(gk_play_app_signing_sha1 2>/dev/null || true)"
+    local fps; fps="$(gk_play_app_signing_fps 2>/dev/null || true)"
+    if [ -n "$fps" ]; then p="${fps% *}"; p256="${fps#* }"; fi
   fi
   if [ -n "$p" ]; then
-    hint "SHA-1 (API Play) : ${c_bold}${p}${c_off}"
+    hint "SHA-1   (API Play) : ${c_bold}${p}${c_off}"
+    [ -n "$p256" ] && hint "SHA-256 (API Play) : ${c_bold}${p256}${c_off}"
     if gk_firebase_cli_ready && gk_firebase_sha_known "$p" 2>/dev/null; then
       ok "Enregistré dans Firebase"
     elif gk_firebase_cli_ready; then
@@ -67,17 +86,21 @@ gk_print_sha1_guide() {
     fi
   else
     hint "Auto : ./scripts/setup-release.sh play-sha (après 1ʳᵉ release Play)"
-    hint "Manuel : Play Console → App signing key certificate → Firebase"
+    hint "Manuel : Play Console → App signing key certificate → SHA-1 / SHA-256"
   fi
   show_link "Play · App signing" "$PLAY_APP_INTEGRITY"
   show_link "Dashboard" "$PLAY_APP_DASHBOARD"
   show_link "Guide Google" "$PLAY_INTEGRITY_HELP"
-  hint "Pas la clé d'upload — Google re-signe l'APK avant distribution."
+  hint "Empreinte du build distribué par Play (Google re-signe l'APK)."
+  hint "C'est ce SHA-256 à ajouter à l'app Firebase pour le sign-in (CI = build signé Play)."
   blank
 
   local u; u="$(gk_sha1_upload)"
+  local u256; u256="$(gk_sha256_upload)"
   printf '  %s③ UPLOAD KEY%s  %soptionnel · sideload release%s\n' "$c_bold" "$c_off" "$c_dim" "$c_off"
-  if [ -n "$u" ]; then hint "SHA-1 : ${c_bold}${u}${c_off}"
+  if [ -n "$u" ]; then
+    hint "SHA-1   : ${c_bold}${u}${c_off}"
+    [ -n "$u256" ] && hint "SHA-256 : ${c_bold}${u256}${c_off}"
   else hint "Généré par : ./scripts/setup-release.sh keystore"
   fi
   blank
