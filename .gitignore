@@ -1,3 +1,4 @@
 # Local credentials — never commit
 .keystore-credentials
 .play-service-account.json
+__pycache__/
