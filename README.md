@@ -35,6 +35,8 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 |---|---|
 | `setup-release.sh` | Assistant release (keystore, Play, Firebase, OAuth, Gemini) |
 | `show-secrets.sh` | Récap secrets locaux vs GitHub |
+| `pull-google-services.sh` | Télécharge `google-services.json` + `WEB_CLIENT_ID` |
+| `pull-dashboard-metrics.sh` | Pipeline métriques → `dashboard/data/latest.json` (app: `scripts/growth/`) |
 | `verify-oauth.sh` | Vérif Google Sign-In / SHA-1 |
 | `gen-keystore.sh` | Génère release.keystore |
 | `build-aab.sh` | Build AAB signé local + vérif empreinte |

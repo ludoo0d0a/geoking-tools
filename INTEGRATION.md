@@ -417,3 +417,31 @@ Tous dans `geoking-tools/templates/` :
 | `whatsnew.py` | `scripts/whatsnew.py` |
 | `android-ci.yml` | `.github/workflows/android-ci.yml` |
 | `release-play.yml` | `.github/workflows/release-play.yml` |
+
+---
+
+## 10. Translate + Play listing (shared)
+
+Scora remains the historical reference; **shared copies** live in this repo (do not refactor Scora in place):
+
+| Path | Role |
+|---|---|
+| `translate/` | DeepL app-string pipeline (`translate.sh`, `translate.py`, …) |
+| `playstore-listing/` | Play listing CLI, listing translate, screenshot validation |
+
+From an app (sibling of `geoking-tools`):
+
+```bash
+export GK_TOOLS="${GK_TOOLS:-../geoking-tools}"
+
+# App strings (adapt modules/languages in your scripts/ wrappers)
+"$GK_TOOLS/translate/translate.sh"
+
+# Play listings
+pip install -r "$GK_TOOLS/playstore-listing/requirements.txt"
+python3 "$GK_TOOLS/playstore-listing/listing_cli.py" --help
+bash "$GK_TOOLS/playstore-listing/translate-listing.sh"
+python3 "$GK_TOOLS/playstore-listing/validate_screenshots.py"
+```
+
+Arthur and new GeoKing apps should wrap these under `scripts/` rather than vendoring a second copy.
