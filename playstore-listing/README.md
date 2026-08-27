@@ -10,3 +10,9 @@ python3 "$GK_TOOLS/playstore-listing/validate_screenshots.py" --help
 ```
 
 Install deps: `pip install -r "$GK_TOOLS/playstore-listing/requirements.txt"`
+
+## Service account permissions
+
+Play Console checkboxes for listing + CI release (FR/EN + API enums):
+
+→ [`service-account-permissions.md`](./service-account-permissions.md)

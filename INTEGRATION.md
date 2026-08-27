@@ -429,6 +429,9 @@ Scora remains the historical reference; **shared copies** live in this repo (do 
 | `translate/` | DeepL app-string pipeline (`translate.sh`, `translate.py`, …) |
 | `playstore-listing/` | Play listing CLI, listing translate, screenshot validation |
 
+Play Console **service account permissions** (listing + release tracks):  
+[`playstore-listing/service-account-permissions.md`](playstore-listing/service-account-permissions.md)
+
 From an app (sibling of `geoking-tools`):
 
 ```bash
