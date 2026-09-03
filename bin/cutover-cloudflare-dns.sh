@@ -105,6 +105,9 @@ sites_to_process() {
 plan_pages_cname_records() {
   local site
   while IFS= read -r site; do
+    if geoking_dns_site_uses_worker_custom_domain "$site"; then
+      continue
+    fi
     local name target
     name="$(geoking_dns_cf_name_for_site "$site")"
     target="$(geoking_dns_pages_target_for_site "$site")"
@@ -161,7 +164,11 @@ cmd_plan() {
   echo
   echo "Pages custom domains:"
   while IFS= read -r site; do
-    printf '  %s (%s)\n' "$(geoking_dns_fqdn_for_site "$site")" "$(geoking_dns_pages_project_for_site "$site")"
+    if geoking_dns_site_uses_worker_custom_domain "$site"; then
+      printf '  %s (Worker custom domain — DNS managed by Wrangler)\n' "$(geoking_dns_fqdn_for_site "$site")"
+    else
+      printf '  %s (%s)\n' "$(geoking_dns_fqdn_for_site "$site")" "$(geoking_dns_pages_project_for_site "$site")"
+    fi
   done < <(sites_to_process)
 }
 
@@ -471,6 +478,10 @@ cmd_pages() {
   [ "$DRY_RUN" = true ] && echo "mode: dry-run"
 
   while IFS= read -r site; do
+    if geoking_dns_site_uses_worker_custom_domain "$site"; then
+      echo "  $(geoking_dns_fqdn_for_site "$site") — skip (Worker custom domain)"
+      continue
+    fi
     local fqdn project
     fqdn="$(geoking_dns_fqdn_for_site "$site")"
     project="$(geoking_dns_pages_project_for_site "$site")"

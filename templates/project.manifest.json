@@ -37,6 +37,17 @@
       }
     },
     {
+      "id": "arthur",
+      "name": "Arthur",
+      "type": "android",
+      "package": "fr.geoking.arthur",
+      "repo": "arthur",
+      "dns": {
+        "subdomain": "arthur",
+        "workerCustomDomain": true
+      }
+    },
+    {
       "id": "telma",
       "name": "Telma",
       "type": "website",
@@ -75,6 +86,17 @@
       "dns": {
         "subdomain": "www",
         "pagesProject": "geoking"
+      }
+    },
+    {
+      "id": "geocaching",
+      "name": "GeoKing Geocaching Landing",
+      "type": "website",
+      "repo": "coming-soon-page",
+      "dns": {
+        "subdomain": "geocaching",
+        "pagesProject": "geocaching",
+        "pagesHost": "geocaching-7lz.pages.dev"
       }
     },
     {

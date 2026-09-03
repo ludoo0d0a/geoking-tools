@@ -57,6 +57,8 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `playstore-listing/play_console.py` | Validate / checklist / apply `playConsole` |
 | `templates/android-ci.yml` | Workflow CI debug |
 | `templates/release-play.yml` | Workflow release Play |
+| `templates/cloudflare-pages.yml` | Workflow deploy landing `website/` → Cloudflare Pages |
+| `templates/wrangler.toml` | Config Pages (`pages_build_output_dir = "website"`) |
 | `INTEGRATION.md` | Guide d'intégration complet |
 
 ## DNS geoking.fr (Netlify → Cloudflare)

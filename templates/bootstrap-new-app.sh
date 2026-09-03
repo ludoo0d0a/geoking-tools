@@ -43,8 +43,6 @@ done
 cp "$TOOLS/templates/whatsnew.py" scripts/
 chmod +x scripts/whatsnew.py
 
-cp "$TOOLS/templates/netlify-ignore.sh" scripts/
-chmod +x scripts/netlify-ignore.sh
 
 if [ ! -f scripts/project.manifest.json ]; then
   cp "$TOOLS/templates/project.manifest.template.json" scripts/project.manifest.json
@@ -85,6 +83,33 @@ if [ ! -f .github/workflows/release-play.yml ]; then
   echo "✓ .github/workflows/release-play.yml — vérifie package_name"
 else
   echo "· release-play.yml existe déjà"
+fi
+
+PAGES_SLUG=""
+if [ -n "$PACKAGE" ]; then
+  PAGES_SLUG="${PACKAGE##*.}"
+elif [ -n "$APP_NAME" ]; then
+  PAGES_SLUG="$(printf '%s' "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
+fi
+
+if [ ! -f .github/workflows/cloudflare-pages.yml ]; then
+  cp "$TOOLS/templates/cloudflare-pages.yml" .github/workflows/cloudflare-pages.yml
+  if [ -n "$PAGES_SLUG" ]; then
+    sed -i.bak "s/MYAPP/$PAGES_SLUG/g" .github/workflows/cloudflare-pages.yml && rm -f .github/workflows/cloudflare-pages.yml.bak
+  fi
+  echo "✓ .github/workflows/cloudflare-pages.yml — vérifie le nom du projet Pages"
+else
+  echo "· cloudflare-pages.yml existe déjà"
+fi
+
+if [ ! -f wrangler.toml ]; then
+  cp "$TOOLS/templates/wrangler.toml" wrangler.toml
+  if [ -n "$PAGES_SLUG" ]; then
+    sed -i.bak "s/MYAPP/$PAGES_SLUG/g" wrangler.toml && rm -f wrangler.toml.bak
+  fi
+  echo "✓ wrangler.toml — vérifie name (Cloudflare Pages)"
+else
+  echo "· wrangler.toml existe déjà"
 fi
 
 # --- gitignore ---

@@ -119,7 +119,8 @@ gk_play_latest_version_code() {
 
 gk_play_generated_apks_json() {
   local token="$1" version_code="$2"
-  gk_play_api GET "${APP_ID}/generatedApks/list?versionCode=${version_code}" "$token"
+  # GET .../applications/{package}/generatedApks/{versionCode}
+  gk_play_api GET "${APP_ID}/generatedApks/${version_code}" "$token"
 }
 
 gk_play_universal_apk_download_id() {
@@ -132,27 +133,56 @@ gk_play_universal_apk_download_id() {
     ' <<<"$json" | head -1
 }
 
+gk_urlencode() {
+  python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"
+}
+
 gk_play_download_universal_apk() {
   local token="$1" version_code="$2" download_id="$3" dest="$4"
-  curl -fsS \
-    "${PLAY_API_BASE}/${APP_ID}/generatedApks/download/${version_code}/${download_id}" \
+  local enc
+  enc="$(gk_urlencode "$download_id")"
+  # GET .../generatedApks/{versionCode}/downloads/{downloadId}:download?alt=media
+  curl -fsSL \
+    "${PLAY_API_BASE}/${APP_ID}/generatedApks/${version_code}/downloads/${enc}:download?alt=media" \
     -H "Authorization: Bearer ${token}" \
     -o "$dest"
 }
 
-gk_sha1_from_apk() {
-  local apk="$1"
-  need keytool
-  keytool -printcert -jarfile "$apk" 2>/dev/null \
-    | awk -F'SHA1: ' '/SHA1:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}'
+gk_apksigner() {
+  local d sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+  ls -d "$sdk"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1
 }
 
-gk_sha256_from_apk() {
-  local apk="$1"
+# Play App Signing APKs are often v2/v3-only — keytool -jarfile (v1 JAR) fails.
+gk_sha_from_apk() {
+  local apk="$1" kind="$2" # SHA1 | SHA256
+  local out as
   need keytool
-  keytool -printcert -jarfile "$apk" 2>/dev/null \
-    | awk -F'SHA256: ' '/SHA256:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}'
+  if [ "$kind" = SHA256 ]; then
+    out="$(keytool -printcert -jarfile "$apk" 2>/dev/null \
+      | awk -F'SHA256: ' '/SHA256:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
+  else
+    out="$(keytool -printcert -jarfile "$apk" 2>/dev/null \
+      | awk -F'SHA1: ' '/SHA1:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
+  fi
+  if [ -n "$out" ]; then
+    printf '%s' "$out"
+    return 0
+  fi
+  as="$(gk_apksigner)"
+  [ -n "$as" ] || return 1
+  if [ "$kind" = SHA256 ]; then
+    "$as" verify --print-certs "$apk" 2>/dev/null \
+      | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}'
+  else
+    "$as" verify --print-certs "$apk" 2>/dev/null \
+      | awk -F': ' '/Signer #1 certificate SHA-1 digest:/{print $2; exit}'
+  fi
 }
+
+gk_sha1_from_apk() { gk_sha_from_apk "$1" SHA1; }
+
+gk_sha256_from_apk() { gk_sha_from_apk "$1" SHA256; }
 
 gk_play_app_signing_sha1() {
   local token="${1:-}"

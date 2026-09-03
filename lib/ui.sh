@@ -34,7 +34,7 @@ subhead() { blank; printf '  %s▸ %s%s\n' "$c_cyan" "$*" "$c_off"; }
 
 ok()   { printf '  %s✓%s  %s\n' "$c_ok" "$c_off" "$*"; }
 warn() { printf '  %s⚠%s   %s\n' "$c_warn" "$c_off" "$*"; }
-fail() { printf '  %s✗%s  %s\n' "$c_err" "$c_off" "$*"; }
+fail() { printf '  %s%s❌%s  %s\n' "$c_bold" "$c_err" "$c_off" "$*"; }
 die()  { fail "$*"; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "Outil requis introuvable : $1"; }
 

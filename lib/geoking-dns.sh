@@ -138,6 +138,13 @@ geoking_dns_pages_project_for_site() {
   '
 }
 
+geoking_dns_site_uses_worker_custom_domain() {
+  local site="$1"
+  [ "$(geoking_dns_manifest_jq --arg site "$site" '
+    [.projects[] | select(.dns.subdomain == $site and .dns.workerCustomDomain == true)] | length
+  ')" -gt 0 ]
+}
+
 geoking_dns_pages_target_for_site() {
   local site="$1"
   local var="MIGRATE_TARGET_${site}"
