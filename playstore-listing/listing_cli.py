@@ -41,6 +41,10 @@ if str(_PLAYSTORE_DIR) not in sys.path:
     sys.path.insert(0, str(_PLAYSTORE_DIR))
 if str(_I18N_DIR) not in sys.path:
     sys.path.insert(0, str(_I18N_DIR))
+# Prefer app-local listing copy (Arthur, Vincent, …) over the Scora default shipped here.
+_APP_LISTING = REPO_ROOT / "scripts" / "playstore"
+if (_APP_LISTING / "listing_copy.py").is_file():
+    sys.path.insert(0, str(_APP_LISTING))
 
 from listing_copy import (  # noqa: E402
     APP_TITLE,
@@ -103,13 +107,31 @@ def package_name() -> str:
     )
 
 
-def read_scora_version() -> str:
+def read_listing_version() -> str:
+    """Version folder name for listings/ — Scora extraprop, else playstore/version.properties."""
     build = REPO_ROOT / "build.gradle.kts"
-    text = build.read_text(encoding="utf-8")
-    match = re.search(r'set\("scoraVersionName",\s*"([^"]+)"\)', text)
-    if not match:
-        raise SystemExit("Could not find scoraVersionName in build.gradle.kts")
-    return match.group(1)
+    if build.is_file():
+        text = build.read_text(encoding="utf-8")
+        match = re.search(r'set\("scoraVersionName",\s*"([^"]+)"\)', text)
+        if match:
+            return match.group(1)
+    props = REPO_ROOT / "playstore" / "version.properties"
+    if props.is_file():
+        for line in props.read_text(encoding="utf-8").splitlines():
+            if line.startswith("versionName="):
+                return line.split("=", 1)[1].strip().removeprefix("v")
+    raise SystemExit(
+        "Could not resolve listing version (scoraVersionName or playstore/version.properties)"
+    )
+
+
+def require_wear_screenshots() -> bool:
+    return bool(playstore_config().get("requireWearScreenshots", True))
+
+
+# Back-compat alias
+def read_scora_version() -> str:
+    return read_listing_version()
 
 
 def load_screenshot_sources() -> dict[str, Any]:
@@ -683,7 +705,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
     for lang, play_locale in LANG_TO_PLAY_LOCALE.items():
         locale_dir = out / play_locale
         if not locale_dir.is_dir():
-            errors.append(f"Missing locale dir: {play_locale}")
+            if play_locale == "en-US":
+                errors.append(f"Missing required locale dir: {play_locale}")
             continue
         try:
             texts = read_locale_files(locale_dir)
@@ -727,11 +750,14 @@ def cmd_validate(args: argparse.Namespace) -> int:
         wear_imgs = sorted((locale_dir / "images" / "wearOsScreenshots").glob("*"))
         phone_imgs = sorted((locale_dir / "images" / "phoneScreenshots").glob("*"))
         if not wear_imgs:
-            errors.append(f"{play_locale}: no wearOsScreenshots")
+            if require_wear_screenshots():
+                errors.append(f"{play_locale}: no wearOsScreenshots")
+            else:
+                warnings.append(f"{play_locale}: no wearOsScreenshots (optional for this app)")
         elif len(wear_imgs) < 4:
             warnings.append(f"{play_locale}: only {len(wear_imgs)} wear screenshots")
         if not phone_imgs:
-            warnings.append(f"{play_locale}: no phoneScreenshots")
+            errors.append(f"{play_locale}: no phoneScreenshots")
 
         md_path = path_for("listingText", lang)
         if not md_path.is_file():
@@ -759,12 +785,16 @@ def cmd_validate(args: argparse.Namespace) -> int:
         _audit_shot_dir = None  # type: ignore[assignment]
     if _audit_shot_dir is not None:
         shot_errors = 0
+        wear_required = require_wear_screenshots()
         for _lang, play_locale in LANG_TO_PLAY_LOCALE.items():
             locale_dir = out / play_locale
+            if not locale_dir.is_dir():
+                continue
             shot_errors += _audit_shot_dir(
                 locale_dir / "images" / "wearOsScreenshots",
                 locale_dir / "images" / "phoneScreenshots",
                 play_locale,
+                require_wear=wear_required,
             )
         if shot_errors:
             print(f"\nValidation failed ({shot_errors} screenshot guideline issue(s)).")

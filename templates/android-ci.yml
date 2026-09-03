@@ -15,4 +15,5 @@ jobs:
     uses: ludoo0d0a/geoking-ci/.github/workflows/android-ci.yml@main
     with:
       artifact_name: MYAPP-debug-apk   # ← renommer (ex. scora-debug-apk)
+      gradle_version: wrapper
     secrets: inherit

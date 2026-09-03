@@ -73,7 +73,13 @@ def promo_phone_ok(paths: list[Path]) -> bool:
     return count >= 4
 
 
-def audit_dir(wear_dir: Path | None, phone_dir: Path | None, label: str) -> int:
+def audit_dir(
+    wear_dir: Path | None,
+    phone_dir: Path | None,
+    label: str,
+    *,
+    require_wear: bool = True,
+) -> int:
     errors = 0
     print(f"\n## {label}")
     if wear_dir and wear_dir.is_dir():
@@ -82,24 +88,32 @@ def audit_dir(wear_dir: Path | None, phone_dir: Path | None, label: str) -> int:
             for p in wear_dir.iterdir()
             if p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
         )
-        print(f"Wear count: {len(wears)} (need 1–8)")
-        if not (1 <= len(wears) <= 8):
-            print(f"  ❌ wear count {len(wears)}")
-            errors += 1
-        for p in wears:
-            issues = check_wear(p)
-            if issues:
-                print(f"  ❌ {p.name}: {', '.join(issues)}")
+        if wears:
+            print(f"Wear count: {len(wears)} (need 1–8)")
+            if not (1 <= len(wears) <= 8):
+                print(f"  ❌ wear count {len(wears)}")
                 errors += 1
-            else:
-                print(f"  ✓ {p.name}")
-        # Path heuristic: montages directory used as wear source
-        if "montages" in str(wear_dir):
-            print("  ❌ wear dir is montages/ (forbidden for Wear slot)")
+            for p in wears:
+                issues = check_wear(p)
+                if issues:
+                    print(f"  ❌ {p.name}: {', '.join(issues)}")
+                    errors += 1
+                else:
+                    print(f"  ✓ {p.name}")
+            if "montages" in str(wear_dir):
+                print("  ❌ wear dir is montages/ (forbidden for Wear slot)")
+                errors += 1
+        elif require_wear:
+            print(f"Wear count: 0 (need 1–8)")
+            print("  ❌ wear count 0")
             errors += 1
-    else:
+        else:
+            print("  ⚠️  no wearOsScreenshots (optional for this app)")
+    elif require_wear:
         print("  ❌ missing wearOsScreenshots")
         errors += 1
+    else:
+        print("  ⚠️  no wearOsScreenshots (optional for this app)")
 
     if phone_dir and phone_dir.is_dir():
         phones = sorted(
