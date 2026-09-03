@@ -79,6 +79,7 @@ cp ../geoking-tools/templates/project.manifest.template.json scripts/project.man
 | `build` | `signInLogTag` | `MyAppSignIn` (tag logcat pour debug OAuth) |
 | `urls.play` | `developerId`, `appId` | IDs Play Console |
 | `urls.*` | liens consoles | Firebase, GCP, Play, Gemini, GitHub secrets |
+| `playConsole` | first-publish answers | Category, contact, declarations, data-safety CSV path — see `templates/play-console.fragment.json` |
 
 Les URLs Play suivent le motif :
 `https://play.google.com/console/u/0/developers/{developerId}/app/{appId}/app-dashboard`
@@ -412,6 +413,7 @@ Tous dans `geoking-tools/templates/` :
 | Fichier | Destination dans l'app |
 |---|---|
 | `project.manifest.template.json` | `scripts/project.manifest.json` |
+| `play-console.fragment.json` | merged into `playConsole` of the app manifest |
 | `_geoking-wrapper.sh` | `scripts/_geoking-wrapper.sh` |
 | `script-stub.sh` | `scripts/<nom>.sh` (un par script) |
 | `whatsnew.py` | `scripts/whatsnew.py` |
@@ -445,6 +447,10 @@ pip install -r "$GK_TOOLS/playstore-listing/requirements.txt"
 python3 "$GK_TOOLS/playstore-listing/listing_cli.py" --help
 bash "$GK_TOOLS/playstore-listing/translate-listing.sh"
 python3 "$GK_TOOLS/playstore-listing/validate_screenshots.py"
+
+# Play Console first-publish snapshot (playConsole in project.manifest.json)
+python3 "$GK_TOOLS/playstore-listing/play_console.py" validate
+python3 "$GK_TOOLS/playstore-listing/play_console.py" checklist
 ```
 
 Arthur and new GeoKing apps should wrap these under `scripts/` rather than vendoring a second copy.

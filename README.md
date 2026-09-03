@@ -53,6 +53,8 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `templates/bootstrap-new-app.sh` | Scaffold automatique dans une app |
 | `templates/project.manifest.json` | Catalogue projets GeoKing (DNS, repos) |
 | `templates/project.manifest.template.json` | Manifest exemple pour une nouvelle app |
+| `templates/play-console.fragment.json` | Réponses first-publish Play Console (`playConsole`) |
+| `playstore-listing/play_console.py` | Validate / checklist / apply `playConsole` |
 | `templates/android-ci.yml` | Workflow CI debug |
 | `templates/release-play.yml` | Workflow release Play |
 | `INTEGRATION.md` | Guide d'intégration complet |

@@ -56,9 +56,17 @@ if [ ! -f scripts/project.manifest.json ]; then
       scripts/project.manifest.json > "$tmp"
     mv "$tmp" scripts/project.manifest.json
   fi
-  echo "✓ scripts/project.manifest.json créé — complète les URLs consoles"
+  echo "✓ scripts/project.manifest.json créé — complète les URLs consoles et playConsole"
 else
   echo "· scripts/project.manifest.json existe déjà — conservé"
+fi
+if command -v jq >/dev/null 2>&1 && [ -f scripts/project.manifest.json ] && [ -f "$TOOLS/templates/play-console.fragment.json" ]; then
+  if ! jq -e '.playConsole.appType' scripts/project.manifest.json >/dev/null 2>&1; then
+    tmp="$(mktemp)"
+    jq -s '.[0] * .[1]' scripts/project.manifest.json "$TOOLS/templates/play-console.fragment.json" > "$tmp"
+    mv "$tmp" scripts/project.manifest.json
+    echo "✓ playConsole fusionné depuis play-console.fragment.json — remplace les TODO"
+  fi
 fi
 
 # --- CI ---

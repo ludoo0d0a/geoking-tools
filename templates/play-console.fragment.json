@@ -1,0 +1,70 @@
+{
+  "playConsole": {
+    "appType": "APPLICATION",
+    "category": "TODO",
+    "defaultLanguage": "en-US",
+    "contact": {
+      "email": "TODO",
+      "website": "https://APP.geoking.fr",
+      "privacyPolicyUrl": "https://APP.geoking.fr/privacy"
+    },
+    "storeListing": {
+      "locales": ["en-US", "fr-FR"],
+      "icon": "playstore/icon-512.png",
+      "featureGraphic": "playstore/feature-graphic.png",
+      "listingsDir": "doc/playstore/listings"
+    },
+    "distribution": {
+      "countries": ["FR"],
+      "managedPublishing": false,
+      "internalTesting": {
+        "testersListName": "TODO",
+        "optInUrl": ""
+      }
+    },
+    "declarations": {
+      "governmentApp": false,
+      "financialFeatures": false,
+      "healthApp": false,
+      "containsAds": false,
+      "advertisingId": {
+        "usesAdvertisingId": true,
+        "purposes": ["ANALYTICS"],
+        "note": "Firebase Analytics merges com.google.android.gms.permission.AD_ID. Answer Yes + Analytics, or tools:node=remove the permission and answer No."
+      },
+      "signInRequired": false,
+      "allFeaturesAvailableWithoutRestriction": true,
+      "targetAge": "18+",
+      "contentRating": {
+        "questionnaireCategory": "OTHER",
+        "notes": ""
+      },
+      "dataSafety": {
+        "csv": "scripts/playstore/data_safety.csv",
+        "collectsOrShares": true,
+        "encryptedInTransit": true,
+        "inAppAccounts": false,
+        "outsideAppAccounts": false,
+        "userDataDeletion": false,
+        "dataTypes": [],
+        "perType": {
+          "collectedAndShared": true,
+          "ephemeral": false,
+          "required": true,
+          "purposes": ["APP_FUNCTIONALITY", "ANALYTICS"]
+        }
+      },
+      "foregroundServices": {
+        "mediaPlayback": false
+      }
+    },
+    "release": {
+      "productionVersionName": "",
+      "productionVersionCode": null,
+      "releaseNotes": {
+        "en-US": "",
+        "fr-FR": ""
+      }
+    }
+  }
+}
