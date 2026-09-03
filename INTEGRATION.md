@@ -2,7 +2,9 @@
 
 Guide pas-à-pas pour brancher release Play, OAuth/Firebase, scripts locaux et CI GitHub Actions sur un projet Android KMP (Compose).
 
-**Référence :** [vincent](https://github.com/ludoo0d0a/vincent) est l'app modèle.
+**App from zero (wizard) :** Cursor skill [`.cursor/skills/new-geoking-app`](.cursor/skills/new-geoking-app/SKILL.md) — scaffold → GitHub → secrets → listing → first **internal** Play upload. This document is the detailed reference that skill points to.
+
+**Référence :** [vincent](https://github.com/ludoo0d0a/vincent) est l'app modèle ; [arthur](https://github.com/ludoo0d0a/arthur) pour `playConsole` / first-publish.
 
 ### Bootstrap en une commande
 

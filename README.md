@@ -2,11 +2,13 @@
 
 Scripts partagés pour les apps Android GeoKing (release Play, OAuth, adb, build local).
 
-> **Nouvelle app ?** → **[INTEGRATION.md](INTEGRATION.md)** (guide pas-à-pas complet)
+> **Nouvelle app ?** → skill **[new-geoking-app](.cursor/skills/new-geoking-app/SKILL.md)** (wizard zero → GitHub Actions → Play internal) + **[INTEGRATION.md](INTEGRATION.md)**
 
 ## Bootstrap rapide
 
-Depuis la racine de ton app (sibling de `geoking-tools`) :
+Cursor agent: invoke the `new-geoking-app` skill for a full greenfield wizard.
+
+Depuis la racine d’une app Gradle déjà créée (sibling de `geoking-tools`) :
 
 ```bash
 ../geoking-tools/templates/bootstrap-new-app.sh --package fr.geoking.myapp --name MyApp
@@ -60,6 +62,7 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `templates/cloudflare-pages.yml` | Workflow deploy landing `website/` → Cloudflare Pages |
 | `templates/wrangler.toml` | Config Pages (`pages_build_output_dir = "website"`) |
 | `INTEGRATION.md` | Guide d'intégration complet |
+| `.cursor/skills/new-geoking-app/` | Skill/wizard Cursor : app from zero → CI → Play internal |
 
 ## DNS geoking.fr (Netlify → Cloudflare)
 
