@@ -47,6 +47,7 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `whatsnew.py` | Génère `playstore/whatsnew/` depuis `whatsnew.xml` |
 | `migrate-geoking-dns.sh` | Migration DNS Netlify → Cloudflare Pages (`geoking.fr`) |
 | `cutover-cloudflare-dns.sh` | Phase 3 : zone Cloudflare DNS + domaines Pages + NS |
+| `fill_website_screenshots.py` | Sync Roborazzi/Play PNGs → `website/assets/` via `screenshot-sources.json` |
 
 ## Templates
 
@@ -60,9 +61,12 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `templates/android-ci.yml` | Workflow CI debug |
 | `templates/release-play.yml` | Workflow release Play |
 | `templates/cloudflare-pages.yml` | Workflow deploy landing `website/` → Cloudflare Pages |
+| `templates/website-deploy-workers.yml` | Deploy Workers assets (`wrangler.jsonc`) |
+| `templates/website-screenshots.yml` | Regenerate + commit `website/assets` from app screenshots |
 | `templates/wrangler.toml` | Config Pages (`pages_build_output_dir = "website"`) |
 | `INTEGRATION.md` | Guide d'intégration complet |
 | `.cursor/skills/new-geoking-app/` | Skill/wizard Cursor : app from zero → CI → Play internal |
+| `.cursor/skills/website-sync/` | Skill : monorepo `website/` ↔ screenshots + Cloudflare CI (Scora pattern) |
 
 ## DNS geoking.fr (Netlify → Cloudflare)
 

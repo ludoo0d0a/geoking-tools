@@ -456,3 +456,27 @@ python3 "$GK_TOOLS/playstore-listing/play_console.py" checklist
 ```
 
 Arthur and new GeoKing apps should wrap these under `scripts/` rather than vendoring a second copy.
+
+---
+
+## 9. Website in the monorepo (Scora pattern)
+
+Landing lives in **`website/`** inside the Android repo. Roborazzi outputs under `screenshots/` are copied into `website/assets/` by shared tooling.
+
+| Piece | Location |
+|---|---|
+| Skill | `.cursor/skills/website-sync/` |
+| Fill script | `bin/fill_website_screenshots.py` |
+| Mapping | app `website/screenshot-sources.json` |
+| Screenshots CI | `templates/website-screenshots.yml` |
+| Deploy Pages | `templates/cloudflare-pages.yml` |
+| Deploy Workers | `templates/website-deploy-workers.yml` |
+
+```bash
+# App root — thin wrapper recommended:
+#   scripts/fill_website_screenshots.py → _geoking-wrapper.sh → bin/fill_website_screenshots.py
+./scripts/fill_website_screenshots.py
+./gradlew generateWebsiteScreenshots -PscreenshotLocales=en,fr
+```
+
+Reference: **Arthur** (static Workers + fill map). **Scora** keeps a richer npm mockup/GIF pipeline app-local; only the copy step is shared here.

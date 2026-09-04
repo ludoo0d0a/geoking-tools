@@ -102,6 +102,26 @@ else
   echo "· cloudflare-pages.yml existe déjà"
 fi
 
+if [ ! -f .github/workflows/website-screenshots.yml ]; then
+  cp "$TOOLS/templates/website-screenshots.yml" .github/workflows/website-screenshots.yml
+  echo "✓ .github/workflows/website-screenshots.yml — sync screenshots → website/assets"
+else
+  echo "· website-screenshots.yml existe déjà"
+fi
+
+if [ ! -f scripts/fill_website_screenshots.py ]; then
+  cat > scripts/fill_website_screenshots.py <<'WRAP'
+#!/usr/bin/env bash
+# Thin wrapper → geoking-tools/bin/fill_website_screenshots.py
+export GK_SCRIPT=fill_website_screenshots.py
+exec "$(cd "$(dirname "$0")" && pwd)/_geoking-wrapper.sh" "$@"
+WRAP
+  chmod +x scripts/fill_website_screenshots.py
+  echo "✓ scripts/fill_website_screenshots.py"
+else
+  echo "· fill_website_screenshots.py existe déjà"
+fi
+
 if [ ! -f wrangler.toml ]; then
   cp "$TOOLS/templates/wrangler.toml" wrangler.toml
   if [ -n "$PAGES_SLUG" ]; then

@@ -1,0 +1,37 @@
+# Cloudflare Workers static assets (wrangler.jsonc assets.directory).
+# Prefer this when project.manifest has dns.workerCustomDomain / wrangler.jsonc.
+# For Pages (pages_build_output_dir), use templates/cloudflare-pages.yml instead.
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "wrangler.jsonc"
+      - "wrangler.toml"
+      - ".github/workflows/website-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: website-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          wranglerVersion: "4"
