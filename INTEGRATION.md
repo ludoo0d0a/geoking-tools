@@ -426,11 +426,14 @@ Tous dans `geoking-tools/templates/` :
 
 ## 10. Translate + Play listing (shared)
 
-Scora remains the historical reference; **shared copies** live in this repo (do not refactor Scora in place):
+Scora remains the historical reference; **shared copies** live in this repo (do not refactor Scora in place).
+
+**Skill:** [`skills/gk-i18n`](skills/gk-i18n/SKILL.md) — bootstrap `<app>/i18n/` from `translate/`, DeepL forward/back, glossary, roundtrip.
 
 | Path | Role |
 |---|---|
 | `translate/` | DeepL app-string pipeline (`translate.sh`, `translate.py`, …) |
+| `skills/gk-i18n/` | Agent skill for wiring the Scora-style `i18n/` tree |
 | `playstore-listing/` | Play listing CLI, listing translate, screenshot validation |
 
 Play Console **service account permissions** (listing + release tracks):  
