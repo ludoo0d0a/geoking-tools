@@ -1,6 +1,6 @@
 # New GeoKing app — operator checklist
 
-Use with the `new-geoking-app` skill. Tick in order.
+Use with the `gk-new-geoking-app` skill. Tick in order.
 
 ## Identity
 

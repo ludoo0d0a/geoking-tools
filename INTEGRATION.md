@@ -2,7 +2,7 @@
 
 Guide pas-à-pas pour brancher release Play, OAuth/Firebase, scripts locaux et CI GitHub Actions sur un projet Android KMP (Compose).
 
-**App from zero (wizard) :** Cursor skill [`.cursor/skills/new-geoking-app`](.cursor/skills/new-geoking-app/SKILL.md) — scaffold → GitHub → secrets → listing → first **internal** Play upload. This document is the detailed reference that skill points to.
+**App from zero (wizard) :** skill [`skills/gk-new-geoking-app`](skills/gk-new-geoking-app/SKILL.md) — scaffold → GitHub → secrets → listing → first **internal** Play upload. This document is the detailed reference that skill points to.
 
 **Référence :** [vincent](https://github.com/ludoo0d0a/vincent) est l'app modèle ; [arthur](https://github.com/ludoo0d0a/arthur) pour `playConsole` / first-publish.
 
@@ -465,7 +465,7 @@ Landing lives in **`website/`** inside the Android repo. Roborazzi outputs under
 
 | Piece | Location |
 |---|---|
-| Skill | `.cursor/skills/website-sync/` |
+| Skill | `skills/gk-website-sync/` |
 | Fill script | `bin/fill_website_screenshots.py` |
 | Mapping | app `website/screenshot-sources.json` |
 | Screenshots CI | `templates/website-screenshots.yml` |

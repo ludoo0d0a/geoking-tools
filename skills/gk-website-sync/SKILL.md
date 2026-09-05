@@ -1,11 +1,12 @@
 ---
-name: website-sync
+name: gk-website-sync
 description: >-
   Keep a GeoKing Android app's website/ in the monorepo in sync with Roborazzi
   screenshots and deploy it via Cloudflare CI (Scora pattern). Use when wiring
   or updating arthur.geoking.fr-style landings, fill_website_screenshots,
-  screenshot-sources.json, website-screenshots / website-deploy workflows, or
-  when asked to sync website from the main app inside the monorepo.
+  screenshot-sources.json, website-screenshots / website-deploy workflows,
+  gk-website-sync / website-sync, or when asked to sync website from the main
+  app inside the monorepo.
 ---
 
 # Website sync (monorepo → Cloudflare)
@@ -162,6 +163,6 @@ npx wrangler deploy   # or pages deploy — dry-run with wrangler whoami first
 ## Related
 
 - Skill **gk-ci** — Play / android-ci wiring
-- Skill **new-geoking-app** — greenfield (bootstrap already copies Pages template)
+- Skill **gk-new-geoking-app** — greenfield (bootstrap already copies Pages template)
 - Scora: `website/README.md`, `scripts/fill_website_screenshots.py` (richer, wear+npm)
 - Arthur: reference static Workers landing + this skill’s first consumer

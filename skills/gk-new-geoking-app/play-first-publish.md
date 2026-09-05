@@ -1,6 +1,6 @@
 # Play Console first-publish (GeoKing)
 
-Companion to `new-geoking-app`. Store durable answers in the app’s  
+Companion to `gk-new-geoking-app`. Store durable answers in the app’s  
 `scripts/project.manifest.json` → `playConsole` (see `templates/play-console.fragment.json`).  
 Arthur is the filled reference.
 

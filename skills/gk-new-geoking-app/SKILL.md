@@ -1,11 +1,12 @@
 ---
-name: new-geoking-app
+name: gk-new-geoking-app
 description: >-
   Wizard to build a GeoKing Android app from zero: local Gradle project, GitHub
   repo, geoking-ci Actions (debug + Play release), Firebase/Play secrets, listing
   + Console declarations, and first internal-track publish. Use when the user
   wants a new app from scratch, greenfield GeoKing project, zero-to-Play Store,
-  bootstrap with full CI/CD, or mentions new-geoking-app / new GeoKing app.
+  bootstrap with full CI/CD, or mentions gk-new-geoking-app / new-geoking-app /
+  new GeoKing app.
 ---
 
 # New GeoKing app (zero → Play)
