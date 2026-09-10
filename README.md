@@ -46,6 +46,8 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `build-aab.sh` | Build AAB signé local + vérif empreinte |
 | `deploy-device.sh` | Build APK + install sur appareil |
 | `adb-reconnect.sh` | Boucle reconnexion adb sans fil |
+| `run-dhu.sh` | Lance l'Android Auto Desktop Head Unit (app-agnostique) |
+| `debug-play-dhu.sh` | Build/install debug + DHU + capture logcat (`--logcat`) pour reproduire un crash Android Auto |
 | `whatsnew.py` | Génère `playstore/whatsnew/` depuis `whatsnew.xml` |
 | `migrate-geoking-dns.sh` | Migration DNS Netlify → Cloudflare Pages (`geoking.fr`) |
 | `cutover-cloudflare-dns.sh` | Phase 3 : zone Cloudflare DNS + domaines Pages + NS |
