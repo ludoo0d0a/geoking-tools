@@ -4,7 +4,8 @@ Scripts partagés pour les apps Android GeoKing (release Play, OAuth, adb, build
 
 > **Nouvelle app ?** → skill **[gk-new-geoking-app](skills/gk-new-geoking-app/SKILL.md)** (wizard zero → GitHub Actions → Play internal) + **[INTEGRATION.md](INTEGRATION.md)**  
 > **In-App Updates ?** → skill **[gk-play-in-app-updates](skills/gk-play-in-app-updates/SKILL.md)** (Gaston phone pattern)  
-> **Settings / Theme / i18n ?** → **[gk-settings](skills/gk-settings/SKILL.md)** · **[gk-theme](skills/gk-theme/SKILL.md)** · **[gk-i18n](skills/gk-i18n/SKILL.md)**
+> **Settings / Theme / i18n ?** → **[gk-settings](skills/gk-settings/SKILL.md)** · **[gk-theme](skills/gk-theme/SKILL.md)** · **[gk-i18n](skills/gk-i18n/SKILL.md)**  
+> **Debug bar (Compose) ?** → skill **[gk-debug-bar](skills/gk-debug-bar/SKILL.md)** + library `android/debug-bar` (`fr.geoking.tools:debug-bar`, includeBuild)
 
 ## Bootstrap rapide
 
@@ -75,6 +76,8 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `skills/gk-settings/` | Skill : phone Settings hub (Gaston / Arthur) |
 | `skills/gk-theme/` | Skill : System / Light / Dark UI theme (Gaston) |
 | `skills/gk-i18n/` | Skill : app string i18n DeepL pipeline (Scora `i18n/` pattern) |
+| `skills/gk-debug-bar/` | Skill : floating HTTP debug overlay via `android/debug-bar` |
+| `android/debug-bar/` | Compose library `fr.geoking.tools:debug-bar` (includeBuild from apps) |
 
 ## DNS geoking.fr (Netlify → Cloudflare)
 

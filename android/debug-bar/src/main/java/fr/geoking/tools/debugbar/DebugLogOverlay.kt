@@ -1,11 +1,12 @@
-package fr.geoking.gaston.ui.map
+package fr.geoking.tools.debugbar
 
-import fr.geoking.gaston.R
-import androidx.compose.animation.*
+import fr.geoking.tools.debugbar.model.HostDataConsumption
+import fr.geoking.tools.debugbar.model.NetworkLog
+import fr.geoking.tools.debugbar.model.ProviderTraceEntry
+import fr.geoking.tools.debugbar.model.ProviderTracePhase
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,34 +21,33 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
-import fr.geoking.gaston.CacheManager
-import fr.geoking.gaston.shared.logging.DebugLogStore
-import fr.geoking.gaston.shared.logging.NetworkLog
-import fr.geoking.gaston.shared.logging.ProviderTraceEntry
-import fr.geoking.gaston.shared.logging.ProviderTracePhase
-import fr.geoking.gaston.shared.logging.ProviderTraceStore
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun DebugLogOverlay(
+    logs: List<NetworkLog>,
+    providerTraces: List<ProviderTraceEntry>,
+    hostConsumption: Map<String, HostDataConsumption>,
+    totalBytesSent: Long,
+    totalBytesReceived: Long,
+    disableCache: Boolean,
+    onDisableCacheChange: (Boolean) -> Unit,
+    onClearCaches: () -> Unit,
+    onClearLogs: () -> Unit,
+    onResetDataConsumption: () -> Unit,
     modifier: Modifier = Modifier,
     detectedCountries: String? = null,
-    onRefresh: (() -> Unit)? = null
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -55,8 +55,17 @@ fun DebugLogOverlay(
         DebugLogOverlayContent(
             isExpanded = isExpanded,
             onExpandedChange = { isExpanded = it },
+            logs = logs,
+            providerTraces = providerTraces,
+            hostConsumption = hostConsumption,
+            totalBytesSent = totalBytesSent,
+            totalBytesReceived = totalBytesReceived,
+            disableCache = disableCache,
+            onDisableCacheChange = onDisableCacheChange,
+            onClearCaches = onClearCaches,
+            onClearLogs = onClearLogs,
+            onResetDataConsumption = onResetDataConsumption,
             detectedCountries = detectedCountries,
-            onRefresh = onRefresh,
             modifier = Modifier.padding(16.dp)
         )
 
@@ -79,8 +88,17 @@ fun DebugLogOverlay(
                     DebugLogOverlayContent(
                         isExpanded = true,
                         onExpandedChange = { isExpanded = it },
+                        logs = logs,
+                        providerTraces = providerTraces,
+                        hostConsumption = hostConsumption,
+                        totalBytesSent = totalBytesSent,
+                        totalBytesReceived = totalBytesReceived,
+                        disableCache = disableCache,
+                        onDisableCacheChange = onDisableCacheChange,
+                        onClearCaches = onClearCaches,
+                        onClearLogs = onClearLogs,
+                        onResetDataConsumption = onResetDataConsumption,
                         detectedCountries = detectedCountries,
-                        onRefresh = onRefresh,
                         modifier = Modifier
                             .padding(16.dp)
                             .clickable(
@@ -98,6 +116,7 @@ fun DebugLogOverlay(
 private enum class DebugOverlayTab {
     Network,
     Providers,
+    DataConsumption,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,23 +124,27 @@ private enum class DebugOverlayTab {
 private fun DebugLogOverlayContent(
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    logs: List<NetworkLog>,
+    providerTraces: List<ProviderTraceEntry>,
+    hostConsumption: Map<String, HostDataConsumption>,
+    totalBytesSent: Long,
+    totalBytesReceived: Long,
+    disableCache: Boolean,
+    onDisableCacheChange: (Boolean) -> Unit,
+    onClearCaches: () -> Unit,
+    onClearLogs: () -> Unit,
+    onResetDataConsumption: () -> Unit,
     detectedCountries: String?,
-    onRefresh: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableStateOf(DebugOverlayTab.Network) }
-    val settingsManager = org.koin.compose.koinInject<fr.geoking.gaston.SettingsManager>()
-    val settings by settingsManager.settings.collectAsState()
-    val logs by DebugLogStore.logs.collectAsState()
-    val providerTraces by ProviderTraceStore.entries.collectAsState()
     var selectedLog by remember { mutableStateOf<NetworkLog?>(null) }
     var selectedTrace by remember { mutableStateOf<ProviderTraceEntry?>(null) }
     var selectedHost by remember { mutableStateOf<String?>(null) }
     val availableHosts = remember(logs) {
         logs.map { it.host }.filter { it.isNotEmpty() }.distinct().sorted()
     }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val hostConsumptionMap = hostConsumption
 
     Box(modifier = modifier.zIndex(2f)) {
         if (!isExpanded) {
@@ -132,7 +155,7 @@ private fun DebugLogOverlayContent(
                     contentColor = Color.White,
                     modifier = Modifier.size(48.dp)
                 ) {
-                    Icon(Icons.Default.BugReport, contentDescription = stringResource(R.string.action_show_logs))
+                    Icon(Icons.Default.BugReport, contentDescription = "Show logs")
                 }
             }
         } else {
@@ -160,8 +183,9 @@ private fun DebugLogOverlayContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 when (selectedTab) {
-                                    DebugOverlayTab.Network -> "${stringResource(R.string.dashboard_network)} (${logs.size})"
-                                    DebugOverlayTab.Providers -> "${stringResource(R.string.debug_overlay_providers)} (${providerTraces.size})"
+                                    DebugOverlayTab.Network -> "Network (${logs.size})"
+                                    DebugOverlayTab.Providers -> "Providers (${providerTraces.size})"
+                                    DebugOverlayTab.DataConsumption -> "Data Usage (${hostConsumptionMap.size})"
                                 },
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
@@ -171,30 +195,25 @@ private fun DebugLogOverlayContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TooltipBox(
                                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text(stringResource(R.string.settings_debug_disable_cache)) } },
+                                tooltip = { PlainTooltip { Text("Disable cache") } },
                                 state = rememberTooltipState()
                             ) {
-                                IconButton(onClick = { settingsManager.setDisableCache(!settings.disableCache) }) {
+                                IconButton(onClick = { onDisableCacheChange(!disableCache) }) {
                                     Icon(
-                                        imageVector = if (settings.disableCache) Icons.Default.CloudOff else Icons.Default.Cloud,
-                                        contentDescription = stringResource(R.string.settings_debug_disable_cache),
-                                        tint = if (settings.disableCache) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurface
+                                        imageVector = if (disableCache) Icons.Default.CloudOff else Icons.Default.Cloud,
+                                        contentDescription = "Disable cache",
+                                        tint = if (disableCache) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
-                            IconButton(onClick = {
-                                scope.launch {
-                                    CacheManager.clearAllCaches(context)
-                                    onRefresh?.invoke()
-                                }
-                            }) {
-                                Icon(Icons.Default.Refresh, stringResource(R.string.action_clear_cache_reload), tint = MaterialTheme.colorScheme.onSurface)
+                            IconButton(onClick = onClearCaches) {
+                                Icon(Icons.Default.Refresh, "Clear cache", tint = MaterialTheme.colorScheme.onSurface)
                             }
-                            IconButton(onClick = { DebugLogStore.clearAll() }) {
-                                Icon(Icons.Default.DeleteSweep, stringResource(R.string.settings_clear_logs), tint = MaterialTheme.colorScheme.onSurface)
+                            IconButton(onClick = onClearLogs) {
+                                Icon(Icons.Default.DeleteSweep, "Clear logs", tint = MaterialTheme.colorScheme.onSurface)
                             }
                             IconButton(onClick = { onExpandedChange(false) }) {
-                                Icon(Icons.Default.Close, stringResource(R.string.action_close), tint = MaterialTheme.colorScheme.onSurface)
+                                Icon(Icons.Default.Close, "Close", tint = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -208,12 +227,17 @@ private fun DebugLogOverlayContent(
                         Tab(
                             selected = selectedTab == DebugOverlayTab.Network,
                             onClick = { selectedTab = DebugOverlayTab.Network },
-                            text = { Text(stringResource(R.string.dashboard_network), fontSize = 12.sp) },
+                            text = { Text("Network", fontSize = 12.sp) },
                         )
                         Tab(
                             selected = selectedTab == DebugOverlayTab.Providers,
                             onClick = { selectedTab = DebugOverlayTab.Providers },
-                            text = { Text(stringResource(R.string.debug_overlay_providers), fontSize = 12.sp) },
+                            text = { Text("Providers", fontSize = 12.sp) },
+                        )
+                        Tab(
+                            selected = selectedTab == DebugOverlayTab.DataConsumption,
+                            onClick = { selectedTab = DebugOverlayTab.DataConsumption },
+                            text = { Text("Data Usage", fontSize = 12.sp) },
                         )
                     }
 
@@ -231,6 +255,14 @@ private fun DebugLogOverlayContent(
                                 traces = providerTraces,
                                 onTraceClick = { selectedTrace = it },
                             )
+                            DebugOverlayTab.DataConsumption -> DataConsumptionTab(
+                                hostConsumptions = remember(hostConsumptionMap) {
+                                    hostConsumptionMap.values.sortedByDescending { it.totalBytes }
+                                },
+                                totalSent = totalBytesSent,
+                                totalReceived = totalBytesReceived,
+                                onResetClick = onResetDataConsumption
+                            )
                         }
                     }
                 }
@@ -243,6 +275,49 @@ private fun DebugLogOverlayContent(
     }
     if (selectedTrace != null) {
         ProviderTraceDetailsDialog(trace = selectedTrace!!, onDismiss = { selectedTrace = null })
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt()
+    val pre = "KMGTPE"[exp - 1]
+    return String.format("%.1f %sB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
+}
+
+@Composable
+private fun DataUsageSummary() {
+    val rx = android.net.TrafficStats.getUidRxBytes(android.os.Process.myUid())
+    val tx = android.net.TrafficStats.getUidTxBytes(android.os.Process.myUid())
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                "App Data Consumption (since boot)",
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Received", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+                    Text(formatBytes(rx), color = Color(0xFF4ADE80), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Sent", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+                    Text(formatBytes(tx), color = Color(0xFF60A5FA), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 
@@ -264,6 +339,9 @@ private fun NetworkDebugTab(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
+
+        DataUsageSummary()
+
         if (availableHosts.isNotEmpty()) {
             LazyRow(
                 modifier = Modifier
@@ -273,7 +351,7 @@ private fun NetworkDebugTab(
             ) {
                 item {
                     HostFilterChip(
-                        label = stringResource(R.string.action_all),
+                        label = "All",
                         selected = selectedHost == null,
                         onClick = { onHostSelected(null) },
                     )
@@ -334,7 +412,7 @@ private fun ProviderTraceTab(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                stringResource(R.string.debug_overlay_no_traces),
+                "No provider traces yet",
                 color = Color.White.copy(alpha = 0.5f),
                 fontSize = 12.sp,
             )
@@ -383,7 +461,7 @@ private fun ProviderTraceItem(trace: ProviderTraceEntry, onClick: () -> Unit) {
             trace.poiCount?.let { count ->
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "$count ${stringResource(R.string.debug_overlay_pois)}",
+                    text = "$count POIs",
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 10.sp,
                 )
@@ -454,34 +532,34 @@ private fun ProviderTraceDetailsDialog(trace: ProviderTraceEntry, onDismiss: () 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+            TextButton(onClick = onDismiss) { Text("Close") }
         },
         title = {
-            Text("${trace.phase.name} — ${trace.provider ?: stringResource(R.string.debug_overlay_poi_providers)}", fontWeight = FontWeight.Bold)
+            Text("${trace.phase.name} — ${trace.provider ?: "POI providers"}", fontWeight = FontWeight.Bold)
         },
         text = {
             SelectionContainer {
                 LazyColumn {
                     item {
-                        DetailItem(stringResource(R.string.debug_overlay_time), Date(trace.timestamp).toString())
-                        DetailItem(stringResource(R.string.debug_overlay_message), trace.message)
-                        trace.provider?.let { DetailItem(stringResource(R.string.debug_overlay_provider), it) }
-                        trace.poiCount?.let { DetailItem(stringResource(R.string.debug_overlay_poi_count), it.toString()) }
-                        trace.durationMs?.let { DetailItem(stringResource(R.string.debug_overlay_duration), "${it}ms") }
+                        DetailItem("Time", Date(trace.timestamp).toString())
+                        DetailItem("Message", trace.message)
+                        trace.provider?.let { DetailItem("Provider", it) }
+                        trace.poiCount?.let { DetailItem("POI count", it.toString()) }
+                        trace.durationMs?.let { DetailItem("Duration", "${it}ms") }
                         if (trace.countries.isNotEmpty()) {
-                            DetailItem(stringResource(R.string.debug_overlay_countries), trace.countries.joinToString(", "))
+                            DetailItem("Countries", trace.countries.joinToString(", "))
                         }
                         if (trace.categories.isNotEmpty()) {
-                            DetailItem(stringResource(R.string.debug_overlay_categories), trace.categories.joinToString(", "))
+                            DetailItem("Categories", trace.categories.joinToString(", "))
                         }
                         if (trace.effectiveProviders.isNotEmpty()) {
-                            DetailItem(stringResource(R.string.debug_overlay_effective), trace.effectiveProviders.joinToString(", "))
+                            DetailItem("Effective", trace.effectiveProviders.joinToString(", "))
                         }
                         if (trace.fetchedProviders.isNotEmpty()) {
-                            DetailItem(stringResource(R.string.debug_overlay_fetched), trace.fetchedProviders.joinToString(", "))
+                            DetailItem("Fetched", trace.fetchedProviders.joinToString(", "))
                         }
                         trace.errors.forEach { err ->
-                            DetailItem(stringResource(R.string.route_error), err)
+                            DetailItem("Error", err)
                         }
                     }
                 }
@@ -563,26 +641,26 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+            TextButton(onClick = onDismiss) { Text("Close") }
         },
         title = {
-            Text(stringResource(R.string.action_request_details), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Request details", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         },
         text = {
             SelectionContainer {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     item {
-                        DetailSection(stringResource(R.string.debug_overlay_general))
+                        DetailSection("General")
                         DetailItem("URL", log.url)
-                        DetailItem(stringResource(R.string.debug_overlay_method), log.method)
-                        DetailItem(stringResource(R.string.debug_overlay_status), log.statusCode?.toString() ?: "N/A")
-                        DetailItem(stringResource(R.string.debug_overlay_duration), "${log.durationMs}ms")
-                        DetailItem(stringResource(R.string.debug_overlay_time), Date(log.timestamp).toString())
+                        DetailItem("Method", log.method)
+                        DetailItem("Status", log.statusCode?.toString() ?: "N/A")
+                        DetailItem("Duration", "${log.durationMs}ms")
+                        DetailItem("Time", Date(log.timestamp).toString())
 
                         val queryParams = remember(log.url) { log.queryParams }
                         if (queryParams.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            DetailSection(stringResource(R.string.debug_overlay_query_parameters))
+                            DetailSection("Query parameters")
                             queryParams.forEach { (k, v) ->
                                 val joinedValue = v.joinToString(", ")
                                 val jsonElement = remember(joinedValue) {
@@ -607,30 +685,42 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        DetailSection(stringResource(R.string.debug_overlay_request_headers))
-                        log.requestHeaders.forEach { (k, v) ->
-                            DetailItem(k, v.joinToString(", "))
+                        CollapsibleDetailSection(
+                            title = "Request headers",
+                            initiallyExpanded = false
+                        ) {
+                            Column {
+                                log.requestHeaders.forEach { (k, v) ->
+                                    DetailItem(k, v.joinToString(", "))
+                                }
+                            }
                         }
 
-                        val reqBody = log.safeRequestBody
+                        val reqBody = remember(log.id, log.requestBody) { log.safeRequestBody }
                         if (reqBody.isNotBlank()) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            DetailSection(stringResource(R.string.debug_overlay_request_body))
+                            DetailSection("Request body")
                             BodyContent(reqBody, onFullscreen = { fullscreenBody = reqBody })
                         }
 
                         log.responseHeaders?.let { headers ->
                             Spacer(modifier = Modifier.height(16.dp))
-                            DetailSection(stringResource(R.string.debug_overlay_response_headers))
-                            headers.forEach { (k, v) ->
-                                DetailItem(k, v.joinToString(", "))
+                            CollapsibleDetailSection(
+                                title = "Response headers",
+                                initiallyExpanded = false
+                            ) {
+                                Column {
+                                    headers.forEach { (k, v) ->
+                                        DetailItem(k, v.joinToString(", "))
+                                    }
+                                }
                             }
                         }
 
-                        val respBody = log.safeResponseBody
+                        val respBody = remember(log.id, log.responseBody) { log.safeResponseBody }
                         if (respBody.isNotBlank()) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            DetailSection(stringResource(R.string.debug_overlay_response_body))
+                            DetailSection("Response body")
                             BodyContent(respBody, onFullscreen = { fullscreenBody = respBody })
                         }
                     }
@@ -649,21 +739,54 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
     }
 }
 
+@Composable
+private fun CollapsibleDetailSection(
+    title: String,
+    initiallyExpanded: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (expanded) {
+            Box(modifier = Modifier.padding(start = 12.dp)) {
+                content()
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
     val jsonElement = remember(body) {
-        try {
-            Json.parseToJsonElement(body)
-        } catch (e: Exception) {
-            null
-        }
+        parseAndLimitJson(body)
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+            TextButton(onClick = onDismiss) { Text("Close") }
         },
         title = {
             Row(
@@ -671,9 +794,9 @@ private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(R.string.action_body_viewer), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Body viewer", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close))
+                    Icon(Icons.Default.Close, contentDescription = "Close")
                 }
             }
         },
@@ -734,207 +857,13 @@ private fun DetailItem(label: String, value: String) {
     }
 }
 
-private data class JsonNode(
-    val path: String,
-    val key: String?,
-    val value: JsonElement,
-    val depth: Int,
-    val truncatedItemCount: Int = 0
-)
-
-private const val MAX_JSON_CONTAINER_ITEMS = 20
-
-@Composable
-private fun JsonTree(
-    jsonElement: JsonElement,
-    modifier: Modifier = Modifier,
-    initialExpanded: Boolean = false,
-    useLazyColumn: Boolean = false
-) {
-    val expandedPaths = remember { mutableStateMapOf<String, Boolean>() }
-
-    val nodes = remember(jsonElement, expandedPaths.toMap()) {
-        val list = mutableListOf<JsonNode>()
-        fun collectNodes(path: String, key: String?, value: JsonElement, depth: Int) {
-            list.add(JsonNode(path, key, value, depth))
-            val isExpanded = expandedPaths.getOrPut(path) { initialExpanded }
-            if (isExpanded) {
-                when (value) {
-                    is JsonObject -> {
-                        val entries = value.entries.toList()
-                        val visibleEntries = entries.take(MAX_JSON_CONTAINER_ITEMS)
-                        visibleEntries.forEach { (k, v) ->
-                            collectNodes("$path/$k", k, v, depth + 1)
-                        }
-                        if (entries.size > MAX_JSON_CONTAINER_ITEMS) {
-                            val truncatedCount = entries.size - MAX_JSON_CONTAINER_ITEMS
-                            list.add(
-                                JsonNode(
-                                    path = "$path/__truncated",
-                                    key = null,
-                                    value = JsonPrimitive("... ($truncatedCount items truncated)"),
-                                    depth = depth + 1,
-                                    truncatedItemCount = truncatedCount
-                                )
-                            )
-                        }
-                    }
-                    is JsonArray -> {
-                        val visibleElements = value.take(MAX_JSON_CONTAINER_ITEMS)
-                        visibleElements.forEachIndexed { i, v ->
-                            collectNodes("$path/$i", i.toString(), v, depth + 1)
-                        }
-                        if (value.size > MAX_JSON_CONTAINER_ITEMS) {
-                            val truncatedCount = value.size - MAX_JSON_CONTAINER_ITEMS
-                            list.add(
-                                JsonNode(
-                                    path = "$path/__truncated",
-                                    key = null,
-                                    value = JsonPrimitive("... ($truncatedCount items truncated)"),
-                                    depth = depth + 1,
-                                    truncatedItemCount = truncatedCount
-                                )
-                            )
-                        }
-                    }
-                    else -> {}
-                }
-            }
-        }
-        collectNodes("", null, jsonElement, 0)
-        list
-    }
-
-    if (useLazyColumn) {
-        LazyColumn(modifier = modifier) {
-            items(nodes, key = { it.path }) { node ->
-                JsonNodeRow(
-                    node = node,
-                    isExpanded = expandedPaths.getOrPut(node.path) { initialExpanded },
-                    onToggle = { expandedPaths[node.path] = !expandedPaths.getOrDefault(node.path, initialExpanded) }
-                )
-            }
-        }
-    } else {
-        Column(modifier = modifier) {
-            nodes.forEach { node ->
-                JsonNodeRow(
-                    node = node,
-                    isExpanded = expandedPaths.getOrPut(node.path) { initialExpanded },
-                    onToggle = { expandedPaths[node.path] = !expandedPaths.getOrDefault(node.path, initialExpanded) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun JsonNodeRow(
-    node: JsonNode,
-    isExpanded: Boolean,
-    onToggle: () -> Unit
-) {
-    val indent = (node.depth * 12).dp
-    val value = node.value
-
-    when (value) {
-        is JsonObject, is JsonArray -> {
-            val label = when (value) {
-                is JsonObject -> if (value.isEmpty()) "{ }" else "{ ... }"
-                else -> if ((value as JsonArray).isEmpty()) "[ ]" else "[ ... ]"
-            }
-            ExpandableNode(
-                indent = indent,
-                key = node.key,
-                label = label,
-                isExpanded = isExpanded,
-                onToggle = onToggle
-            )
-        }
-        is JsonPrimitive -> {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = indent, top = 2.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Invisible spacer to align with expandable nodes (which have a 16dp icon)
-                Spacer(modifier = Modifier.width(16.dp))
-                if (node.key != null) {
-                    Text(
-                        text = "\"${node.key}\": ",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Text(
-                    text = if (value.isString) "\"${value.content}\"" else value.content,
-                    color = when {
-                        value.isString -> Color(0xFF2DD4BF)
-                        value.content == "true" || value.content == "false" -> Color(0xFFF472B6)
-                        value.content == "null" -> Color(0xFF94A3B8)
-                        else -> Color(0xFFFB923C)
-                    },
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExpandableNode(
-    indent: Dp,
-    key: String?,
-    label: String,
-    isExpanded: Boolean,
-    onToggle: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(start = indent, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.5f),
-            modifier = Modifier.size(16.dp)
-        )
-        if (key != null) {
-            Text(
-                text = "\"$key\": ",
-                color = Color(0xFF94A3B8),
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Text(
-            text = label,
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace
-        )
-    }
-}
-
 @Composable
 private fun BodyContent(
     body: String,
     onFullscreen: (() -> Unit)? = null
 ) {
     val jsonElement = remember(body) {
-        try {
-            Json.parseToJsonElement(body)
-        } catch (e: Exception) {
-            null
-        }
+        parseAndLimitJson(body)
     }
 
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -968,12 +897,207 @@ private fun BodyContent(
             ) {
                 Icon(
                     Icons.Default.Fullscreen,
-                    contentDescription = stringResource(R.string.action_fullscreen),
+                    contentDescription = "Fullscreen",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DataConsumptionTab(
+    hostConsumptions: List<HostDataConsumption>,
+    totalSent: Long,
+    totalReceived: Long,
+    onResetClick: () -> Unit,
+) {
+    val totalBytes = totalSent + totalReceived
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Total consumption",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            formatBytes(totalBytes),
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Button(
+                        onClick = onResetClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = "Reset",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Reset",
+                            fontSize = 11.sp,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Rx: ${formatBytes(totalReceived)}",
+                        color = Color(0xFF4ADE80),
+                        fontSize = 11.sp
+                    )
+                    Text(
+                        "Tx: ${formatBytes(totalSent)}",
+                        color = Color(0xFF60A5FA),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+
+        if (hostConsumptions.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "No data consumption yet",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                )
+            }
+        } else {
+            val maxBytes = remember(hostConsumptions) {
+                hostConsumptions.maxOfOrNull { it.totalBytes }?.coerceAtLeast(1L) ?: 1L
+            }
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(hostConsumptions, key = { it.host }) { hostData ->
+                    HostConsumptionItem(hostData = hostData, maxBytes = maxBytes)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostConsumptionItem(hostData: HostDataConsumption, maxBytes: Long) {
+    val fraction = (hostData.totalBytes.toFloat() / maxBytes.toFloat()).coerceIn(0f, 1f)
+    val providerName = hostData.providerName
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                if (!providerName.isNullOrBlank()) {
+                    Text(
+                        text = providerName,
+                        color = Color(0xFF93C5FD),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = hostData.host,
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 11.sp
+                    )
+                } else {
+                    Text(
+                        text = hostData.host,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = formatBytes(hostData.totalBytes),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+                Text(
+                    text = "${hostData.requestCount} requests",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 10.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        LinearProgressIndicator(
+            progress = { fraction },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
+            color = Color(0xFF38BDF8),
+            trackColor = Color.White.copy(alpha = 0.1f)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Rx: ${formatBytes(hostData.bytesReceived)}",
+                color = Color(0xFF4ADE80),
+                fontSize = 10.sp
+            )
+            Text(
+                text = "Tx: ${formatBytes(hostData.bytesSent)}",
+                color = Color(0xFF60A5FA),
+                fontSize = 10.sp
+            )
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(top = 8.dp),
+            color = Color.White.copy(alpha = 0.1f)
+        )
     }
 }
 
