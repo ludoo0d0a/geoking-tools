@@ -61,10 +61,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ludoo0d0a/geoking-tools
-          path: .geoking-tools
+          path: geoking-tools
 
       - name: Point GK_TOOLS at checked-out tools
-        run: echo "GK_TOOLS=${{ github.workspace }}/.geoking-tools" >> "$GITHUB_ENV"
+        run: echo "GK_TOOLS=${{ github.workspace }}/geoking-tools" >> "$GITHUB_ENV"
 
       - name: Setup Gradle (JDK 21 + Android SDK)
         if: ${{ github.event.inputs.copy_only != 'true' }}
