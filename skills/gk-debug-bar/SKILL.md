@@ -22,7 +22,23 @@ verbose flag.
 | **Capture (OkHttp)** | Arthur-style `DebugInterceptor` + `DebugLogger` (see below) |
 | **Capture (Ktor)** | Gaston `AppModule` `ResponseObserver` → `DebugLogStore` |
 
-Resolve tools: `$GK_TOOLS` → `../geoking-tools` → `../../geoking-tools` (Gaston is under `_auto/`).
+Resolve tools: `$GK_TOOLS` → `geoking-tools/` (CI checkout path) → `../geoking-tools` → `../../geoking-tools` (Gaston under `_auto/`).
+
+**CI (Gaston):** after `actions/checkout` of the app, checkout tools and set `GK_TOOLS`:
+
+```yaml
+- name: Checkout geoking-tools
+  uses: actions/checkout@v4
+  with:
+    repository: ludoo0d0a/geoking-tools
+    path: geoking-tools
+
+# on every ./gradlew step:
+env:
+  GK_TOOLS: ${{ github.workspace }}/geoking-tools
+```
+
+Library-only CI lives in `geoking-tools/.github/workflows/debug-bar.yml` (`:debug-bar:compileDebugKotlin`).
 
 ```
 ~/dev/android/
@@ -49,7 +65,7 @@ In the app’s `settings.gradle.kts`:
 
 ```kotlin
 val gkToolsRoot = System.getenv("GK_TOOLS")
-    ?: listOf("../geoking-tools", "../../geoking-tools")
+    ?: listOf("geoking-tools", "../geoking-tools", "../../geoking-tools")
         .map { rootDir.resolve(it) }
         .firstOrNull { it.resolve("android").isDirectory }
         ?.absolutePath
