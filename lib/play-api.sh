@@ -157,12 +157,23 @@ gk_play_release_notes_json() {
 gk_play_upload_bundle() {
   local token="$1" edit="$2" aab="$3"
   [ -f "$aab" ] || return 1
-  curl -fsS \
+  local tmp code
+  tmp="$(mktemp)"
+  code="$(curl -sS -o "$tmp" -w '%{http_code}' \
     -X POST \
     -H "Authorization: Bearer ${token}" \
     -H "Content-Type: application/octet-stream" \
     --data-binary @"${aab}" \
-    "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/${APP_ID}/edits/${edit}/bundles?uploadType=media"
+    "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/${APP_ID}/edits/${edit}/bundles?uploadType=media")"
+  if [ "$code" != "200" ]; then
+    echo "Play bundles.upload HTTP ${code}:" >&2
+    cat "$tmp" >&2
+    echo >&2
+    rm -f "$tmp"
+    return 1
+  fi
+  cat "$tmp"
+  rm -f "$tmp"
 }
 
 # Assign uploaded versionCode(s) to a track (status completed by default).

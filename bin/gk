@@ -3,7 +3,7 @@
 #
 #   ./scripts/gk --list
 #   ./scripts/gk setup-release
-#   ./scripts/gk release-play-local --track internal
+#   ./scripts/gk build-and-publish --track internal
 #
 # Prefer this over remembering which stub exists. Thin scripts/* symlinks remain
 # for muscle memory (./scripts/setup-release.sh).
@@ -21,7 +21,7 @@ Usage:
 
 Examples:
   ./scripts/gk setup-release
-  ./scripts/gk release-play-local --dry-run
+  ./scripts/gk build-and-publish --dry-run
   ./scripts/gk build-aab
 EOF
 }

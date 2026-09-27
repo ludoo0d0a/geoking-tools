@@ -62,7 +62,7 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `verify-oauth.sh` | Vérif Google Sign-In / SHA-1 |
 | `gen-keystore.sh` | Génère release.keystore |
 | `build-aab.sh` | Build AAB signé local + vérif empreinte |
-| `release-play-local.sh` | Fallback hors CI : tests → AAB signé → upload Play (même flux que geoking-ci) |
+| `build-and-publish.sh` | Fallback hors CI : tests → AAB signé → upload Play (même flux que geoking-ci) |
 | `deploy-device.sh` | Build APK + install sur appareil |
 | `adb-reconnect.sh` | Boucle reconnexion adb sans fil |
 | `run-dhu.sh` | Lance l'Android Auto Desktop Head Unit (app-agnostique) |
