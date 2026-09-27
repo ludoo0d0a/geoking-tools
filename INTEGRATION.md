@@ -88,51 +88,54 @@ Les URLs Play suivent le motif :
 
 ---
 
-## 2. Wrappers scripts
+## 2. Scripts partagés — référence unique (comme `includeBuild`)
 
-Les scripts vivent dans **geoking-tools** ; chaque app garde des wrappers minces dans `scripts/`.
+Les scripts vivent **uniquement** dans **geoking-tools**. Chaque app pointe vers
+le même arbre (Gradle `includeBuild` + shell) :
 
-### Copie automatique
+```
+$GK_TOOLS → <app>/geoking-tools → ../geoking-tools → ../../geoking-tools
+```
 
-Depuis la racine de ton app :
+### Bootstrap / refresh
 
 ```bash
-mkdir -p scripts
-cp ../geoking-tools/templates/project.manifest.template.json scripts/
-cp ../geoking-tools/templates/_geoking-wrapper.sh scripts/
-cp ../geoking-tools/templates/whatsnew.py scripts/
-
-for s in setup-release show-secrets verify-oauth pull-google-services gen-keystore build-aab release-play-local deploy-device adb-reconnect; do
-  cp "../geoking-tools/templates/script-stub.sh" "scripts/$s.sh"
-done
-
-chmod +x scripts/*.sh scripts/whatsnew.py
+# depuis la racine de l'app
+../geoking-tools/bin/link-scripts.sh
 ```
+
+`link-scripts.sh` crée :
+
+| Chemin | Rôle |
+|---|---|
+| `geoking-tools` → `../geoking-tools` | Symlink local (**gitignored** — CI checkout réel au même path) |
+| `scripts/_geoking-wrapper.sh` | Seul vrai script local |
+| `scripts/<cmd>.sh` → wrapper | Symlinks (basename = commande tools) |
+| `scripts/gk` | `./scripts/gk --list` / `./scripts/gk setup-release` |
+
+Les fichiers app-only restent locaux : `project.manifest.json`, scripts custom
+(`listing-cli.sh`, etc.).
 
 ### Structure résultante
 
 ```
-my-new-app/scripts/
-├── _geoking-wrapper.sh      # résout geoking-tools, délègue
-├── project.manifest.json    # config spécifique à l'app
-├── setup-release.sh         # stub → geoking-tools/bin/setup-release.sh
-├── show-secrets.sh
-├── verify-oauth.sh
-├── pull-google-services.sh  # télécharge google-services.json depuis Firebase
-├── gen-keystore.sh
-├── build-aab.sh
-├── release-play-local.sh    # fallback hors CI → Play
-├── deploy-device.sh
-├── adb-reconnect.sh
-└── whatsnew.py              # stub Python
+my-new-app/
+├── geoking-tools/              # symlink local (ou checkout CI)
+├── scripts/
+│   ├── _geoking-wrapper.sh     # résout geoking-tools, délègue
+│   ├── gk → _geoking-wrapper.sh
+│   ├── setup-release.sh → …    # idem pour chaque bin public
+│   ├── project.manifest.json   # config spécifique à l'app
+│   └── …
+└── settings.gradle.kts         # includeBuild("$gkToolsRoot/android")
 ```
 
 ### Test
 
 ```bash
-./scripts/pull-google-services.sh  # télécharge google-services.json (firebase login requis)
-./scripts/verify-oauth.sh          # après avoir placé google-services.json
-./scripts/setup-release.sh         # wizard complet (keystore, Play, Firebase…)
+./scripts/gk --list
+./scripts/pull-google-services.sh
+./scripts/setup-release.sh
 ```
 
 ---
@@ -150,6 +153,9 @@ composeApp/google-services.json
 *.jks
 scripts/.keystore-credentials
 scripts/.adb-wireless
+
+# Local symlink from link-scripts.sh (CI checks out the real repo here)
+/geoking-tools
 
 # Generated Play release notes
 playstore/whatsnew/
@@ -399,7 +405,7 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 
 | Symptôme | Piste |
 |---|---|
-| `geoking-tools introuvable` | Clone sibling ou `export GK_TOOLS=…` |
+| `geoking-tools introuvable` | `./scripts/link-scripts.sh`, clone sibling, ou `export GK_TOOLS=…` |
 | CI : `workflow not found` | `geoking-ci` doit être **public** (ou Team+ avec accès partagé) |
 | CI : `gradle: command not found` | Normal si pas de wrapper — geoking-ci provisionne Gradle 8.13 |
 | Google Sign-In échoue en local | SHA-1 debug manquant dans Firebase/GCP → `./scripts/verify-oauth.sh` |

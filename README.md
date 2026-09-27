@@ -32,12 +32,29 @@ Clone à côté de tes projets :
 
 Ou : `export GK_TOOLS=~/dev/android/geoking-tools`
 
+**Référence unique (comme `includeBuild`)** — depuis la racine d'une app :
+
+```bash
+../geoking-tools/bin/link-scripts.sh
+```
+
+Ça crée :
+
+| Chemin | Rôle |
+|---|---|
+| `geoking-tools` → `../geoking-tools` | Même pointeur que Gradle (`includeBuild("…/android")`) |
+| `scripts/_geoking-wrapper.sh` | Seul vrai script local |
+| `scripts/*.sh` → wrapper | Symlinks (plus de stubs dupliqués) |
+| `scripts/gk` | Dispatcher : `./scripts/gk --list` / `./scripts/gk setup-release` |
+
 Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets, CI).
 
 ## Scripts
 
 | Script | Rôle |
 |---|---|
+| `link-scripts.sh` | Symlink `geoking-tools/` + entrypoints `scripts/*` (réf. unique) |
+| `gk` | Dispatcher `./scripts/gk <cmd>` / `--list` |
 | `setup-release.sh` | Assistant release (keystore, Play, Firebase, OAuth, Gemini) |
 | `show-secrets.sh` | Récap secrets locaux vs GitHub |
 | `pull-google-services.sh` | Télécharge `google-services.json` + `WEB_CLIENT_ID` |

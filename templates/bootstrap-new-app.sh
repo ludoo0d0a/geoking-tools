@@ -31,17 +31,8 @@ done
 
 mkdir -p scripts .github/workflows
 
-# --- scripts ---
-cp "$TOOLS/templates/_geoking-wrapper.sh" scripts/
-chmod +x scripts/_geoking-wrapper.sh
-
-for s in setup-release show-secrets verify-oauth pull-google-services gen-keystore build-aab release-play-local deploy-device adb-reconnect; do
-  printf '#!/usr/bin/env bash\nGK_SCRIPT=%s.sh exec "$(dirname "$0")/_geoking-wrapper.sh" "$@"\n' "$s" > "scripts/$s.sh"
-  chmod +x "scripts/$s.sh"
-done
-
-cp "$TOOLS/templates/whatsnew.py" scripts/
-chmod +x scripts/whatsnew.py
+# --- scripts: unique geoking-tools reference + symlinks (same idea as includeBuild) ---
+"$TOOLS/bin/link-scripts.sh"
 
 
 if [ ! -f scripts/project.manifest.json ]; then

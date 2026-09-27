@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Dispatcher: list / run any geoking-tools bin command for the current app.
+#
+#   ./scripts/gk --list
+#   ./scripts/gk setup-release
+#   ./scripts/gk release-play-local --track internal
+#
+# Prefer this over remembering which stub exists. Thin scripts/* symlinks remain
+# for muscle memory (./scripts/setup-release.sh).
+set -euo pipefail
+
+TOOLS="$(cd "$(dirname "$0")/.." && pwd)"
+BIN="$TOOLS/bin"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  gk --list | -l              List shared commands
+  gk <command> [args…]        Run geoking-tools/bin/<command>
+  gk --help
+
+Examples:
+  ./scripts/gk setup-release
+  ./scripts/gk release-play-local --dry-run
+  ./scripts/gk build-aab
+EOF
+}
+
+list_cmds() {
+  local f base
+  echo "Shared geoking-tools commands:"
+  for f in "$BIN"/*.sh "$BIN"/*.py "$BIN"/gk; do
+    [ -e "$f" ] || continue
+    base="$(basename "$f")"
+    case "$base" in
+      adb-wireless.sh|link-scripts.sh|gk) continue ;;
+    esac
+    printf '  %s\n' "${base%.sh}"
+  done | sort -u
+}
+
+if [ $# -eq 0 ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+if [ "$1" = "-l" ] || [ "$1" = "--list" ]; then
+  list_cmds
+  exit 0
+fi
+
+CMD="$1"
+shift
+# Accept setup-release or setup-release.sh
+case "$CMD" in
+  *.sh|*.py) TARGET="$BIN/$CMD" ;;
+  *)
+    if [ -f "$BIN/$CMD.sh" ]; then TARGET="$BIN/$CMD.sh"
+    elif [ -f "$BIN/$CMD.py" ]; then TARGET="$BIN/$CMD.py"
+    elif [ -f "$BIN/$CMD" ]; then TARGET="$BIN/$CMD"
+    else
+      echo "Commande inconnue : $CMD (gk --list)" >&2
+      exit 1
+    fi
+    ;;
+esac
+
+# GK_PROJECT_ROOT should already be set by scripts/_geoking-wrapper.sh.
+# When called as geoking-tools/bin/gk directly, require cwd = app or env.
+if [ -z "${GK_PROJECT_ROOT:-}" ]; then
+  if [ -f settings.gradle.kts ] || [ -f scripts/project.manifest.json ]; then
+    export GK_PROJECT_ROOT="$(pwd)"
+  else
+    echo "GK_PROJECT_ROOT requis — lance via ./scripts/gk depuis l'app." >&2
+    exit 1
+  fi
+fi
+
+exec "$TARGET" "$@"

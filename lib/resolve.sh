@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Resolve geoking-tools install directory.
-# Set GK_TOOLS explicitly, or place geoking-tools next to the app repo.
+# Same order as includeBuild (gk-debug-bar):
+#   $GK_TOOLS → <app>/geoking-tools → ../geoking-tools → ../../geoking-tools
 set -euo pipefail
 
 gk_tools_resolve() {
@@ -14,10 +15,11 @@ gk_tools_resolve() {
   if [ -n "$project_root" ]; then
     local candidate
     for candidate in \
+      "$project_root/geoking-tools" \
       "$project_root/../geoking-tools" \
       "$project_root/../../geoking-tools" \
       "$HOME/dev/android/geoking-tools"; do
-      if [ -d "$candidate" ]; then
+      if [ -d "$candidate/bin" ] || [ -d "$candidate/android" ]; then
         GK_TOOLS="$(cd "$candidate" && pwd)"
         printf '%s' "$GK_TOOLS"
         return 0
@@ -25,6 +27,6 @@ gk_tools_resolve() {
     done
   fi
 
-  echo "geoking-tools introuvable. Clone-le à côté du projet ou exporte GK_TOOLS." >&2
+  echo "geoking-tools introuvable. ./scripts/link-scripts.sh, clone sibling, ou export GK_TOOLS." >&2
   return 1
 }
