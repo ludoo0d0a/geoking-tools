@@ -102,7 +102,7 @@ cp ../geoking-tools/templates/project.manifest.template.json scripts/
 cp ../geoking-tools/templates/_geoking-wrapper.sh scripts/
 cp ../geoking-tools/templates/whatsnew.py scripts/
 
-for s in setup-release show-secrets verify-oauth pull-google-services gen-keystore build-aab deploy-device adb-reconnect; do
+for s in setup-release show-secrets verify-oauth pull-google-services gen-keystore build-aab release-play-local deploy-device adb-reconnect; do
   cp "../geoking-tools/templates/script-stub.sh" "scripts/$s.sh"
 done
 
@@ -121,6 +121,7 @@ my-new-app/scripts/
 ├── pull-google-services.sh  # télécharge google-services.json depuis Firebase
 ├── gen-keystore.sh
 ├── build-aab.sh
+├── release-play-local.sh    # fallback hors CI → Play
 ├── deploy-device.sh
 ├── adb-reconnect.sh
 └── whatsnew.py              # stub Python
@@ -328,7 +329,7 @@ Chaque app ne contient que ~15 lignes YAML ; la logique build/release vit dans g
 5. **OAuth** — `./scripts/setup-release.sh firebase` puis `oauth` ; enregistrer SHA-1 debug + Play App Signing
 6. **Vérifier** — `./scripts/setup-release.sh verify`
 7. **CI** — push sur `main`, vérifier Actions
-8. **Play** — première upload internal via CI ou `./scripts/build-aab.sh` en local
+8. **Play** — première upload internal via CI, ou `./scripts/release-play-local.sh` si Actions est indisponible
 
 ---
 
@@ -355,6 +356,7 @@ Le Google Sign-In a besoin des **deux** types de clients OAuth dans le projet Fi
 | `./scripts/deploy-device.sh` | Build + install sur téléphone (USB ou Wi-Fi adb) |
 | `./scripts/adb-reconnect.sh -s IP:5555` | Garder adb sans fil actif pendant le dev |
 | `./scripts/build-aab.sh` | AAB signé local + vérif empreinte avant upload manuel |
+| `./scripts/release-play-local.sh` | **Fallback hors CI** (crédits Actions épuisés) : tests → AAB → upload Play API (piste `internal` par défaut). Options : `--track`, `--skip-tests`, `--skip-review`, `--dry-run`, `-y` |
 | `./scripts/show-secrets.sh --redact` | Partager un état config sans secrets en clair |
 
 ---
@@ -405,6 +407,7 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 | Google Sign-In échoue sur Play | SHA-1 **App signing** (pas upload) dans Firebase → Play Console → Intégrité |
 | `release-play.yml n'injecte PAS WEB_CLIENT_ID` | Le workflow doit utiliser `geoking-ci` avec `secrets: inherit` |
 | AAB rejeté (signature) | `./scripts/build-aab.sh` compare l'empreinte avant upload |
+| Actions minutes / crédits épuisés | `./scripts/release-play-local.sh` (même flux que geoking-ci, upload Play API local) |
 
 ---
 

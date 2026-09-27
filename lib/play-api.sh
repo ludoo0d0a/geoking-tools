@@ -117,6 +117,119 @@ gk_play_latest_version_code() {
   printf '%s' "$codes" | awk 'NF { if ($1 > max) max = $1 } END { if (max) print max }'
 }
 
+# Next versionCode for a local release: max(Play tracks, playstore/version.properties) + 1.
+# Falls back to version.properties (or 1) when Play has no releases yet.
+gk_play_next_version_code() {
+  local token="$1"
+  local props_vc play_vc next=1
+  if [ -f "$ROOT/playstore/version.properties" ]; then
+    props_vc="$(grep '^versionCode=' "$ROOT/playstore/version.properties" | cut -d= -f2- || true)"
+    if [[ "${props_vc:-}" =~ ^[0-9]+$ ]]; then
+      next=$((props_vc + 1))
+    fi
+  fi
+  if play_vc="$(gk_play_latest_version_code "$token" 2>/dev/null)"; then
+    if [[ "$play_vc" =~ ^[0-9]+$ ]] && [ $((play_vc + 1)) -gt "$next" ]; then
+      next=$((play_vc + 1))
+    fi
+  fi
+  printf '%s' "$next"
+}
+
+# Build releaseNotes JSON array from playstore/whatsnew/whatsnew-<locale> files.
+gk_play_release_notes_json() {
+  local dir="${1:-$ROOT/playstore/whatsnew}"
+  need jq
+  local f lang text arr='[]'
+  [ -d "$dir" ] || { printf '%s' "$arr"; return 0; }
+  for f in "$dir"/whatsnew-*; do
+    [ -f "$f" ] || continue
+    lang="${f##*/whatsnew-}"
+    [ -n "$lang" ] || continue
+    text="$(cat "$f")"
+    arr="$(jq -nc --argjson a "$arr" --arg lang "$lang" --arg text "$text" \
+      '$a + [{language:$lang, text:$text}]')"
+  done
+  printf '%s' "$arr"
+}
+
+# Upload AAB into an existing edit. Prints Bundle JSON (includes versionCode).
+gk_play_upload_bundle() {
+  local token="$1" edit="$2" aab="$3"
+  [ -f "$aab" ] || return 1
+  curl -fsS \
+    -X POST \
+    -H "Authorization: Bearer ${token}" \
+    -H "Content-Type: application/octet-stream" \
+    --data-binary @"${aab}" \
+    "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/${APP_ID}/edits/${edit}/bundles?uploadType=media"
+}
+
+# Assign uploaded versionCode(s) to a track (status completed by default).
+gk_play_track_assign() {
+  local token="$1" edit="$2" track="$3" version_code="$4"
+  local status="${5:-completed}"
+  local notes_json="${6:-[]}"
+  need jq
+  local body
+  body="$(jq -nc \
+    --arg track "$track" \
+    --arg status "$status" \
+    --argjson vc "$version_code" \
+    --argjson notes "$notes_json" \
+    '{track:$track, releases:[{versionCodes:[$vc|tostring], status:$status, releaseNotes:$notes}]}')"
+  gk_play_api PUT "${APP_ID}/edits/${edit}/tracks/${track}" "$token" \
+    -d "$body"
+}
+
+gk_play_edit_commit() {
+  local token="$1" edit="$2"
+  local skip_review="${3:-false}"
+  local url="${PLAY_API_BASE}/${APP_ID}/edits/${edit}:commit"
+  if [ "$skip_review" = true ] || [ "$skip_review" = "true" ]; then
+    url="${url}?changesNotSentForReview=true"
+  fi
+  curl -fsS -X POST "$url" \
+    -H "Authorization: Bearer ${token}" \
+    -H "Content-Type: application/json"
+}
+
+# High-level: create edit → upload AAB → assign track → commit.
+# Prints committed edit JSON on success. Cleans up the edit on failure.
+gk_play_release_aab() {
+  local token="$1" aab="$2" track="${3:-internal}"
+  local skip_review="${4:-false}"
+  local status="${5:-completed}"
+  local notes_dir="${6:-$ROOT/playstore/whatsnew}"
+
+  need jq
+  local edit bundle_json version_code notes_json commit_json
+  edit="$(gk_play_edit_insert "$token")"
+  [ -n "$edit" ] || return 1
+
+  # shellcheck disable=SC2064
+  trap "gk_play_edit_delete '$token' '$edit'" RETURN
+
+  echo "  → upload AAB ($(du -h "$aab" | awk '{print $1}'))…" >&2
+  bundle_json="$(gk_play_upload_bundle "$token" "$edit" "$aab")" || return 1
+  version_code="$(printf '%s' "$bundle_json" | jq -r '.versionCode // empty')"
+  [ -n "$version_code" ] || {
+    echo "Play upload: versionCode manquant dans la réponse bundle" >&2
+    printf '%s\n' "$bundle_json" >&2
+    return 1
+  }
+  echo "  → bundle versionCode=${version_code}" >&2
+
+  notes_json="$(gk_play_release_notes_json "$notes_dir")"
+  echo "  → piste ${track} (status=${status})…" >&2
+  gk_play_track_assign "$token" "$edit" "$track" "$version_code" "$status" "$notes_json" >/dev/null || return 1
+
+  echo "  → commit edit…" >&2
+  commit_json="$(gk_play_edit_commit "$token" "$edit" "$skip_review")" || return 1
+  trap - RETURN
+  printf '%s' "$commit_json"
+}
+
 gk_play_generated_apks_json() {
   local token="$1" version_code="$2"
   # GET .../applications/{package}/generatedApks/{versionCode}
