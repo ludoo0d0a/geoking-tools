@@ -68,6 +68,10 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `run-dhu.sh` | Lance l'Android Auto Desktop Head Unit (app-agnostique) |
 | `debug-play-dhu.sh` | Build/install debug + DHU + capture logcat (`--logcat`) pour reproduire un crash Android Auto |
 | `whatsnew.py` | Génère `playstore/whatsnew/` depuis `whatsnew.xml` |
+| `listing-cli.sh` | Play listing CLI (`playstore-listing/listing_cli.py`) |
+| `play-console.sh` | First-publish Play Console (`playstore-listing/play_console.py`) |
+| `translate-strings.sh` | DeepL app strings via app-local `i18n/` (gk-i18n) |
+| `update-version-catalog.sh` | `libs.versions.toml` via version-catalog-update (JDK 21) |
 | `migrate-geoking-dns.sh` | Migration DNS Netlify → Cloudflare Pages (`geoking.fr`) |
 | `cutover-cloudflare-dns.sh` | Phase 3 : zone Cloudflare DNS + domaines Pages + NS |
 | `fill_website_screenshots.py` | Sync Roborazzi/Play PNGs → `website/assets/` via `screenshot-sources.json` |

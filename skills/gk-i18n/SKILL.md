@@ -54,7 +54,7 @@ from the geoking-tools tree — paths would point at the tools repo.
 - [ ] 3. Sync Gradle resource locales / supportedLocales if the app filters langs
 - [ ] 4. i18n/.env with DEEPL_API_KEY (never commit)
 - [ ] 5. Optional glossary/{lang}.md for domain terms
-- [ ] 6. Thin wrappers: translate.sh / backtranslate.sh (--modules for this app)
+- [ ] 6. Edit i18n/translate.sh + backtranslate.sh (--modules for this app); app entrypoint is `./scripts/translate-strings.sh` (link-scripts)
 - [ ] 7. Forward-translate missing strings; spot-check FR (and others)
 - [ ] 8. Optional: backtranslate + compare.sh --html QA
 - [ ] 9. Optional: cleanup.sh --dry-run before deleting unused keys

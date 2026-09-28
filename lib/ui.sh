@@ -60,6 +60,17 @@ info_box() {
 
 sedi(){ if sed --version >/dev/null 2>&1; then sed -i "$@"; else sed -i '' "$@"; fi; }
 
-ask()    { local p="$1" a; printf '  %s?%s %s' "$c_cyan" "$c_off" "$p"; read -r -p " " a; printf '%s' "$a"; }
-confirm(){ local a; printf '  %s?%s %s' "$c_cyan" "$c_off" "$1 [o/N] "; read -r -p "" a
-           [ "$a" = o ] || [ "$a" = O ] || [ "$a" = y ] || [ "$a" = Y ]; }
+# Prompts must go to stderr: ask() is typically used as `var="$(ask …)"`, so
+# anything on stdout is swallowed and the script looks stuck with no question.
+ask() {
+  local p="$1" a
+  printf '  %s?%s %s ' "$c_cyan" "$c_off" "$p" >&2
+  read -r a
+  printf '%s' "$a"
+}
+confirm() {
+  local a
+  printf '  %s?%s %s [o/N] ' "$c_cyan" "$c_off" "$1" >&2
+  read -r a
+  [ "$a" = o ] || [ "$a" = O ] || [ "$a" = y ] || [ "$a" = Y ]
+}

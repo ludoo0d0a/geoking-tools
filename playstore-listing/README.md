@@ -3,12 +3,16 @@
 Copied from Scora `scripts/playstore/`. Manage Play Console listings, listing translations, screenshot validation, and first-publish answers.
 
 ```bash
+# Preferred (after link-scripts.sh):
+./scripts/listing-cli.sh --help
+./scripts/play-console.sh validate
+./scripts/play-console.sh checklist
+
+# Or call the tools tree directly:
 export GK_TOOLS="${GK_TOOLS:-../geoking-tools}"
 python3 "$GK_TOOLS/playstore-listing/listing_cli.py" --help
 bash "$GK_TOOLS/playstore-listing/translate-listing.sh"
 python3 "$GK_TOOLS/playstore-listing/validate_screenshots.py" --help
-python3 "$GK_TOOLS/playstore-listing/play_console.py" validate
-python3 "$GK_TOOLS/playstore-listing/play_console.py" checklist
 ```
 
 ## First-publish answers (`playConsole`)

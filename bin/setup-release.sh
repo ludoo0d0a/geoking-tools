@@ -5,6 +5,9 @@
 # Usage (via le wrapper scripts/ du projet) :
 #   ./scripts/setup-release.sh [all|keystore|play|firebase|oauth|config|play-sha|gemini|secrets|verify]
 #
+# ATTENTION — « keystore » : ne régénère PAS la clé d'upload si l'app est déjà
+# sur Play (403 wrong key + écrase KEYSTORE_* GitHub). Restaure la clé existante.
+#
 set -euo pipefail
 
 # shellcheck source=../lib/project-env.sh
@@ -16,23 +19,56 @@ cd "$ROOT"
 step_keystore(){
   head_ "🔑  1 · Keystore de signature"
   info_box \
-    "Signe l'AAB publié sur le Play Store par GitHub Actions." \
-    "Secrets : KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD"
+    "Signe l'AAB publié sur le Play Store (CI / build-and-publish local)." \
+    "Secrets poussés : KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD"
   show_link "GitHub Secrets" "$GITHUB_ACTIONS_SECRETS"
+  blank
+  warn "RISQUE — ne régénère PAS le keystore si l'app est déjà sur Play."
+  info_box \
+    "Play n'accepte que la clé d'upload déjà enregistrée (App signing → Upload key)." \
+    "Une nouvelle clé → 403 « signed with the wrong key » à l'upload AAB." \
+    "Ça écrase aussi les secrets GitHub KEYSTORE_* (local + CI qui les utilisent)." \
+    "Si la clé est perdue : restaure une sauvegarde, ou demande un reset upload key" \
+    "dans Play Console — ne lance pas « Régénérer » à la légère."
+  blank
+  # Scora (and older apps) may still use SIGNING_KEY / KEY_STORE_PASSWORD in CI —
+  # regenerating KEYSTORE_* does not update those legacy secret names.
+  if [ -f "$SCRIPTS/project.manifest.json" ]; then
+    local expected
+    expected="$(jq -r '.build.uploadCertSha1 // empty' "$SCRIPTS/project.manifest.json" 2>/dev/null || true)"
+    if [ -n "$expected" ]; then
+      hint "SHA-1 upload attendu (manifest) : ${c_bold}${expected}${c_off}"
+    fi
+  fi
   blank
   need keytool; need gh; need openssl; need base64
   local PASS
   if [ -f "$KS_PATH" ] && [ -f "$CRED" ]; then
     ok "Keystore existant : release.keystore"
-    if confirm "Réutiliser (re-pousser les secrets GitHub) ?"; then
-      PASS="$(grep '^KEYSTORE_PASSWORD=' "$CRED" | cut -d= -f2-)"
-    elif confirm "Régénérer ? ATTENTION : change la signature (avant 1ère publication Play) !"; then
-      rm -f "$KS_PATH"; PASS=""
+    local existing_sha1=""
+    PASS="$(grep '^KEYSTORE_PASSWORD=' "$CRED" | cut -d= -f2-)"
+    existing_sha1="$(gk_sha1_upload "$PASS" 2>/dev/null || true)"
+    [ -n "$existing_sha1" ] && hint "SHA-1 local actuel : ${c_bold}${existing_sha1}${c_off}"
+    if confirm "Réutiliser (re-pousser les secrets GitHub KEYSTORE_*) ?"; then
+      :
+    elif confirm "Régénérer ? DANGER : nouvelle clé rejetée par Play si l'app est déjà publiée — continue seulement AVANT la 1ʳᵉ release Play ?"; then
+      warn "Régénération demandée — la clé précédente ne pourra plus uploader sur Play."
+      rm -f "$KS_PATH" "$CRED"
+      PASS=""
     else
       hint "Étape ignorée."; return
     fi
   fi
   if [ ! -f "$KS_PATH" ]; then
+    if [ -f "$SCRIPTS/project.manifest.json" ] \
+      && [ -n "$(jq -r '.build.uploadCertSha1 // empty' "$SCRIPTS/project.manifest.json" 2>/dev/null || true)" ]; then
+      warn "Ce projet a déjà un uploadCertSha1 dans le manifest (app déjà sur Play)."
+      if ! confirm "Créer quand même une NOUVELLE clé (fortement déconseillé) ?"; then
+        hint "Restaure plutôt la clé d'upload existante → release.keystore + scripts/.keystore-credentials"
+        hint "Ou exporte SIGNING_KEY / KEY_STORE_PASSWORD / ALIAS depuis ta sauvegarde."
+        return
+      fi
+    fi
     PASS="$(openssl rand -base64 48 | LC_ALL=C tr -dc 'A-Za-z0-9')"; PASS="${PASS:0:28}"
     say "  Génération de release.keystore …"
     keytool -genkeypair -v -keystore "$KS_PATH" -alias "$ALIAS" \
@@ -50,6 +86,8 @@ step_keystore(){
   printf '%s' "$ALIAS" | gh secret set KEY_ALIAS
   printf '%s' "$PASS"  | gh secret set KEY_PASSWORD
   ok "Secrets KEYSTORE_* mis à jour sur GitHub"
+  warn "Note : certains workflows (ex. Scora) utilisent encore SIGNING_KEY / KEY_STORE_PASSWORD —"
+  hint "ceux-là ne sont PAS mis à jour ici. Ne les écrase pas avec une nouvelle clé."
   local s; s="$(gk_sha1_upload "$PASS")"
   [ -n "$s" ] && hint "SHA-1 upload (③) : ${c_bold}${s}${c_off}"
 }
@@ -58,29 +96,43 @@ step_keystore(){
 step_play(){
   head_ "📦  2 · Compte de service Google Play"
   info_box "Permet à la CI d'uploader l'AAB sans intervention manuelle." \
-           "Secret : PLAY_SERVICE_ACCOUNT_JSON"
+           "Secret : PLAY_SERVICE_ACCOUNT_JSON" \
+           "Fichier local attendu : scripts/.play-service-account.json"
   blank
   need gh
-  step "Activer l'API Play Android Developer ($PROJECT_ID)"
-  show_url "$GCP_PLAY_API"
-  step "Créer un compte de service (Clés → JSON)"
-  show_url "$GCP_SERVICE_ACCOUNTS"
-  step "Play Console → Utilisateurs → Gestionnaire de releases"
-  show_url "$PLAY_APP_DASHBOARD"
-  blank
-  local p; p="$(ask "Chemin du JSON téléchargé (Entrée pour passer)")"
-  if [ -n "$p" ]; then
-    p="${p/#\~/$HOME}"
-    [ -f "$p" ] || { warn "Fichier introuvable : $p"; return; }
+
+  local p=""
+  p="$(gk_play_sa_json_path 2>/dev/null || true)"
+
+  if [ -n "$p" ] && [ -f "$p" ]; then
+    ok "JSON trouvé : $p"
     gh secret set PLAY_SERVICE_ACCOUNT_JSON < "$p"
-    umask 077
-    cp "$p" "$SCRIPTS/.play-service-account.json"
-    chmod 600 "$SCRIPTS/.play-service-account.json"
+    if [ "$p" != "$SCRIPTS/.play-service-account.json" ]; then
+      umask 077
+      cp "$p" "$SCRIPTS/.play-service-account.json"
+      chmod 600 "$SCRIPTS/.play-service-account.json"
+    fi
     ok "Secret PLAY_SERVICE_ACCOUNT_JSON enregistré"
     ok "Copie locale → scripts/.play-service-account.json (gitignored)"
-  else
-    hint "Plus tard : gh secret set PLAY_SERVICE_ACCOUNT_JSON < fichier.json"
+    return
   fi
+
+  warn "scripts/.play-service-account.json introuvable — à télécharger une fois :"
+  blank
+  step "1. Activer l'API Play Android Developer ($PROJECT_ID)"
+  show_url "$GCP_PLAY_API"
+  blank
+  step "2. Ouvrir Comptes de service → créer (ou ouvrir) le compte Play → Clés → Ajouter une clé → JSON"
+  show_url "$GCP_SERVICE_ACCOUNTS"
+  hint "Le navigateur télécharge un fichier …-xxxxx.json"
+  blank
+  step "3. Play Console → Utilisateurs et permissions → Inviter le client_email du JSON"
+  hint "Rôle : Gestionnaire de releases (accès à l'app $APP_ID)"
+  show_url "$PLAY_APP_DASHBOARD"
+  blank
+  step "4. Enregistrer le JSON téléchargé exactement ici, puis relancer :"
+  code "cp ~/Downloads/<fichier>.json scripts/.play-service-account.json"
+  code "./scripts/setup-release.sh play"
 }
 
 # ---- étape 3 : Firebase Auth -----------------------------------------------

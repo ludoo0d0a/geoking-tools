@@ -13,6 +13,10 @@ Copied from Scora `i18n/` as a shared reference implementation. **Do not edit Sc
 export GK_TOOLS="${GK_TOOLS:-../geoking-tools}"
 mkdir -p i18n && cp -R "$GK_TOOLS/translate/"* i18n/
 # Edit i18n/languages.py + translate.sh --modules, add i18n/.env (DEEPL_API_KEY)
+
+# After link-scripts.sh:
+./scripts/translate-strings.sh          # runs app-local i18n/translate.sh
+# or:
 cd i18n && ./translate.sh
 ```
 

@@ -113,8 +113,9 @@ $GK_TOOLS → <app>/geoking-tools → ../geoking-tools → ../../geoking-tools
 | `scripts/<cmd>.sh` → wrapper | Symlinks (basename = commande tools) |
 | `scripts/gk` | `./scripts/gk --list` / `./scripts/gk setup-release` |
 
-Les fichiers app-only restent locaux : `project.manifest.json`, scripts custom
-(`listing-cli.sh`, etc.).
+Les fichiers app-only restent locaux : `project.manifest.json` (et tout script
+vraiment spécifique à l'app). Listing / Play Console / i18n / version-catalog
+passent par `link-scripts.sh` → `bin/{listing-cli,play-console,translate-strings,update-version-catalog}.sh`.
 
 ### Structure résultante
 

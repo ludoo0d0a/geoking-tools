@@ -109,7 +109,7 @@ Agent must then:
 2. Patch `release-play.yml` `package_name` and `android-ci.yml` `artifact_name`.
 3. If module ≠ `:composeApp`, set workflow `gradle_module`, `apk_glob`, `aab_glob` (see INTEGRATION.md).
 4. Apply Gradle signing + `VERSION_CODE`/`VERSION_NAME` + BuildConfig secrets from **gk-ci** / INTEGRATION §4 (env-based keystore; never commit `.keystore`).
-5. Add thin wrappers if missing: `scripts/listing-cli.sh`, `scripts/play-console.sh` → `$GK_TOOLS/playstore-listing/…`.
+5. Listing / Play Console entrypoints come from `link-scripts.sh` (`./scripts/listing-cli.sh`, `./scripts/play-console.sh`). No app-local stubs.
 
 ---
 
