@@ -137,6 +137,45 @@ esac
 AAB_GLOB="${GRADLE_AAB_GLOB:-$MODULE_PATH/build/outputs/bundle/release/${MODULE_PATH}-release.aab}"
 AAB=""
 
+# Resolve upload keystore: release.keystore, else legacy <app>-app.keystore, else KEYSTORE_FILE env.
+if [ ! -f "$KS_PATH" ]; then
+  for cand in \
+      "$ROOT/gaston-app.keystore" \
+      "${KEYSTORE_FILE:-}"; do
+    [ -n "$cand" ] && [ -f "$cand" ] || continue
+    KS_PATH="$cand"
+    ok "Keystore : $KS_PATH"
+    break
+  done
+  # Generic fallback: any *-app.keystore at repo root
+  if [ ! -f "$KS_PATH" ]; then
+    for cand in "$ROOT"/*-app.keystore; do
+      [ -f "$cand" ] || continue
+      KS_PATH="$cand"
+      ok "Keystore : $KS_PATH"
+      break
+    done
+  fi
+fi
+
+# Seed scripts/.keystore-credentials from env (legacy CI names supported).
+if [ ! -f "$CRED" ]; then
+  _kp="${KEYSTORE_PASSWORD:-${KEY_STORE_PASSWORD:-}}"
+  _ka="${KEY_ALIAS:-${ALIAS:-}}"
+  _kpw="${KEY_PASSWORD:-${_kp}}"
+  if [ -n "$_kp" ] && [ -n "$_ka" ]; then
+    umask 077
+    {
+      echo "# NE PAS COMMITER — généré $(date -u +%FT%TZ) depuis env"
+      echo "KEYSTORE_PASSWORD=$_kp"
+      echo "KEY_ALIAS=$_ka"
+      echo "KEY_PASSWORD=$_kpw"
+    } > "$CRED"
+    chmod 600 "$CRED"
+    ok "Credentials écrits → scripts/.keystore-credentials (depuis env)"
+  fi
+fi
+
 if [ -n "$EXISTING_AAB" ]; then
   AAB="$(cd "$(dirname "$EXISTING_AAB")" && pwd)/$(basename "$EXISTING_AAB")"
   [ -f "$AAB" ] || die "AAB introuvable : $EXISTING_AAB"
@@ -145,8 +184,8 @@ if [ -n "$EXISTING_AAB" ]; then
   hint "Pour un nouveau versionCode, relance sans --aab afin de rebuilder."
 else
   subhead "Build AAB signé"
-  [ -f "$KS_PATH" ]   || die "release.keystore introuvable à la racine du projet."
-  [ -f "$CRED" ] || die "scripts/.keystore-credentials introuvable."
+  [ -f "$KS_PATH" ]   || die "Keystore introuvable (release.keystore ou *-app.keystore). Lance ./scripts/setup-release.sh keystore"
+  [ -f "$CRED" ] || die "scripts/.keystore-credentials introuvable. Exporte KEYSTORE_PASSWORD (ou KEY_STORE_PASSWORD) + KEY_ALIAS (ou ALIAS) puis relance."
   KEYSTORE_PASSWORD="$(grep '^KEYSTORE_PASSWORD=' "$CRED" | cut -d= -f2-)"
   KEY_ALIAS="$(grep '^KEY_ALIAS=' "$CRED" | cut -d= -f2-)"
   KEY_PASSWORD="$(grep '^KEY_PASSWORD=' "$CRED" | cut -d= -f2-)"
@@ -154,7 +193,7 @@ else
 
   EXPECT_SHA1="$(keytool -list -v -keystore "$KS_PATH" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null \
                  | awk -F'SHA1: ' '/SHA1:/{print $2; exit}')"
-  [ -n "$EXPECT_SHA1" ] || die "Impossible de lire l'empreinte du keystore."
+  [ -n "$EXPECT_SHA1" ] || die "Impossible de lire l'empreinte du keystore (mauvais mot de passe / alias ?). alias=$KEY_ALIAS"
 
   gk_setup_build_env "$ROOT"
   echo "${c_dim}→ ${BUNDLE_GRADLE_TASK}…${c_off}"
