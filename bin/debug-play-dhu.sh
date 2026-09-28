@@ -112,7 +112,7 @@ if [ "$DO_BUILD" = true ]; then
   gk_setup_build_env "$ROOT"
   MODULE_PATH="${GRADLE_MODULE#:}"
   APK="$ROOT/$MODULE_PATH/build/outputs/apk/debug/${MODULE_PATH}-debug.apk"
-  "${GRADLE[@]}" "${GRADLE_MODULE}:assembleDebug" --no-daemon
+  "${GRADLE[@]}" "${GRADLE_MODULE}:assembleDebug"
   [ -f "$APK" ] || die "APK not found: $APK"
   install_apk || die "Install failed on $DEVICE_SERIAL."
   ok "Installed debug build on $DEVICE_SERIAL"

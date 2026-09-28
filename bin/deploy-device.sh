@@ -107,7 +107,7 @@ fi
 
 echo
 echo "${c_dim}→ build ${BUILD_TYPE}…${c_off}"
-"${GRADLE[@]}" "$GRADLE_TASK" --no-daemon --stacktrace
+"${GRADLE[@]}" "$GRADLE_TASK" --stacktrace
 [ -f "$APK" ] || die "APK introuvable : $APK"
 ok "APK : $APK"
 

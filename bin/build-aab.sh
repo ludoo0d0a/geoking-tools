@@ -41,7 +41,7 @@ KEYSTORE_FILE="$KS_PATH" \
 KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
 KEY_ALIAS="$KEY_ALIAS" \
 KEY_PASSWORD="$KEY_PASSWORD" \
-"${GRADLE[@]}" "${GRADLE_MODULE}:bundleRelease" --no-daemon --stacktrace
+"${GRADLE[@]}" "${GRADLE_MODULE}:bundleRelease" --stacktrace
 
 MODULE_PATH="${GRADLE_MODULE#:}"
 AAB="$ROOT/$MODULE_PATH/build/outputs/bundle/release/${MODULE_PATH}-release.aab"
