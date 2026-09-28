@@ -13,6 +13,9 @@
     "keystoreDn": "CN=MyApp, OU=GeoKing, O=GeoKing, L=Paris, C=FR",
     "mainActivity": ".MainActivity",
     "signInLogTag": "MyAppSignIn",
+    "unitTestTasks": ":composeApp:testDebugUnitTest",
+    "bundleTask": "bundleRelease",
+    "aabGlob": "composeApp/build/outputs/bundle/release/*.aab",
     "playStore": {
       "requireWearScreenshots": false,
       "listingsDir": "doc/playstore/listings"

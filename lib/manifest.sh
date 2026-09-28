@@ -63,6 +63,9 @@ gk_manifest_load() {
   gk_manifest_export CF_WORKER_URL "$(gk_manifest_jq "$json" '.urls.worker // empty')"
 
   gk_manifest_export GRADLE_MODULE "$(gk_manifest_jq "$json" '.build.gradleModule // ":composeApp"')"
+  gk_manifest_export GRADLE_UNIT_TEST_TASKS "$(gk_manifest_jq "$json" '.build.unitTestTasks // empty')"
+  gk_manifest_export GRADLE_BUNDLE_TASK "$(gk_manifest_jq "$json" '.build.bundleTask // "bundleRelease"')"
+  gk_manifest_export GRADLE_AAB_GLOB "$(gk_manifest_jq "$json" '.build.aabGlob // empty')"
   gk_manifest_export GOOGLE_SERVICES_REL "$(gk_manifest_jq "$json" '.build.googleServices // "composeApp/google-services.json"')"
   gk_manifest_export KEY_ALIAS "$(gk_manifest_jq "$json" '.build.keystoreAlias // "key0"')"
   gk_manifest_export KEYSTORE_DN "$(gk_manifest_jq "$json" '.build.keystoreDn // "CN=App, OU=GeoKing, O=GeoKing, L=Paris, C=FR"')"

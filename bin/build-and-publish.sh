@@ -113,18 +113,29 @@ elif [ -n "$EXISTING_AAB" ]; then
 else
   gk_setup_build_env "$ROOT"
   if [ -z "$UNIT_TEST_TASKS" ]; then
-    UNIT_TEST_TASKS="${GRADLE_MODULE}:testDebugUnitTest"
+    if [ -n "${GRADLE_UNIT_TEST_TASKS:-}" ]; then
+      UNIT_TEST_TASKS="$GRADLE_UNIT_TEST_TASKS"
+    else
+      UNIT_TEST_TASKS="${GRADLE_MODULE}:testDebugUnitTest"
+    fi
   fi
   subhead "Unit tests"
   echo "${c_dim}→ ${UNIT_TEST_TASKS}${c_off}"
   # shellcheck disable=SC2086
-  "${GRADLE[@]}" $UNIT_TEST_TASKS --no-daemon --stacktrace
+  "${GRADLE[@]}" $UNIT_TEST_TASKS --stacktrace
   ok "Tests OK"
 fi
 
 # --- signed AAB ---
 MODULE_PATH="${GRADLE_MODULE#:}"
-AAB="$ROOT/$MODULE_PATH/build/outputs/bundle/release/${MODULE_PATH}-release.aab"
+BUNDLE_TASK="${GRADLE_BUNDLE_TASK:-bundleRelease}"
+# Accept "bundlePlaystoreRelease" or ":androidApp:bundlePlaystoreRelease"
+case "$BUNDLE_TASK" in
+  *:*) BUNDLE_GRADLE_TASK="$BUNDLE_TASK" ;;
+  *)   BUNDLE_GRADLE_TASK="${GRADLE_MODULE}:${BUNDLE_TASK}" ;;
+esac
+AAB_GLOB="${GRADLE_AAB_GLOB:-$MODULE_PATH/build/outputs/bundle/release/${MODULE_PATH}-release.aab}"
+AAB=""
 
 if [ -n "$EXISTING_AAB" ]; then
   AAB="$(cd "$(dirname "$EXISTING_AAB")" && pwd)/$(basename "$EXISTING_AAB")"
@@ -146,14 +157,20 @@ else
   [ -n "$EXPECT_SHA1" ] || die "Impossible de lire l'empreinte du keystore."
 
   gk_setup_build_env "$ROOT"
-  echo "${c_dim}→ ${GRADLE_MODULE}:bundleRelease…${c_off}"
+  echo "${c_dim}→ ${BUNDLE_GRADLE_TASK}…${c_off}"
   KEYSTORE_FILE="$KS_PATH" \
   KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
   KEY_ALIAS="$KEY_ALIAS" \
   KEY_PASSWORD="$KEY_PASSWORD" \
-  "${GRADLE[@]}" "${GRADLE_MODULE}:bundleRelease" --no-daemon --stacktrace
+  "${GRADLE[@]}" "$BUNDLE_GRADLE_TASK" --stacktrace
 
-  [ -f "$AAB" ] || die "AAB non produit ($AAB)."
+  # Resolve AAB via glob (flavored apps) or exact default path.
+  # shellcheck disable=SC2086
+  set -- $ROOT/$AAB_GLOB
+  if [ $# -ge 1 ] && [ -f "$1" ]; then
+    AAB="$1"
+  fi
+  [ -n "$AAB" ] && [ -f "$AAB" ] || die "AAB non produit (glob : $AAB_GLOB)."
   GOT_SHA1="$(keytool -printcert -jarfile "$AAB" 2>/dev/null \
               | awk -F'SHA1: ' '/SHA1:/{print $2; exit}')"
   if [ "$GOT_SHA1" != "$EXPECT_SHA1" ]; then
