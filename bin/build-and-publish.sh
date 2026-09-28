@@ -158,21 +158,33 @@ if [ ! -f "$KS_PATH" ]; then
   fi
 fi
 
-# Seed scripts/.keystore-credentials from env (legacy CI names supported).
+# Seed scripts/.keystore-credentials from env / local.properties (legacy CI names supported).
 if [ ! -f "$CRED" ]; then
   _kp="${KEYSTORE_PASSWORD:-${KEY_STORE_PASSWORD:-}}"
   _ka="${KEY_ALIAS:-${ALIAS:-}}"
   _kpw="${KEY_PASSWORD:-${_kp}}"
+  if [ -z "$_kp" ] && [ -f "$LP" ]; then
+    _kp="$(grep '^KEYSTORE_PASSWORD=' "$LP" 2>/dev/null | cut -d= -f2- || true)"
+    [ -z "$_kp" ] && _kp="$(grep '^KEY_STORE_PASSWORD=' "$LP" 2>/dev/null | cut -d= -f2- || true)"
+  fi
+  if [ -z "$_ka" ] && [ -f "$LP" ]; then
+    _ka="$(grep '^KEY_ALIAS=' "$LP" 2>/dev/null | cut -d= -f2- || true)"
+    [ -z "$_ka" ] && _ka="$(grep '^ALIAS=' "$LP" 2>/dev/null | cut -d= -f2- || true)"
+  fi
+  if [ -z "$_kpw" ] && [ -f "$LP" ]; then
+    _kpw="$(grep '^KEY_PASSWORD=' "$LP" 2>/dev/null | cut -d= -f2- || true)"
+  fi
+  _kpw="${_kpw:-${_kp}}"
   if [ -n "$_kp" ] && [ -n "$_ka" ]; then
     umask 077
     {
-      echo "# NE PAS COMMITER — généré $(date -u +%FT%TZ) depuis env"
+      echo "# NE PAS COMMITER — généré $(date -u +%FT%TZ) depuis env / local.properties"
       echo "KEYSTORE_PASSWORD=$_kp"
       echo "KEY_ALIAS=$_ka"
       echo "KEY_PASSWORD=$_kpw"
     } > "$CRED"
     chmod 600 "$CRED"
-    ok "Credentials écrits → scripts/.keystore-credentials (depuis env)"
+    ok "Credentials écrits → scripts/.keystore-credentials (depuis env / local.properties)"
   elif [ -n "$_kp" ] && [ -z "$_ka" ]; then
     warn "KEYSTORE_PASSWORD défini mais KEY_ALIAS/ALIAS manquant (manifest keystoreAlias ?)"
   fi
