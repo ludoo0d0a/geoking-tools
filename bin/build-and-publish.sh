@@ -173,6 +173,8 @@ if [ ! -f "$CRED" ]; then
     } > "$CRED"
     chmod 600 "$CRED"
     ok "Credentials écrits → scripts/.keystore-credentials (depuis env)"
+  elif [ -n "$_kp" ] && [ -z "$_ka" ]; then
+    warn "KEYSTORE_PASSWORD défini mais KEY_ALIAS/ALIAS manquant (manifest keystoreAlias ?)"
   fi
 fi
 
