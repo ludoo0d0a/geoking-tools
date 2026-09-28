@@ -37,7 +37,9 @@
       "appId": "PLAY_APP_ID",
       "dashboard": "https://play.google.com/console/u/0/developers/PLAY_DEVELOPER_ID/app/PLAY_APP_ID/app-dashboard",
       "integrity": "https://play.google.com/console/u/0/developers/PLAY_DEVELOPER_ID/app/PLAY_APP_ID/keymanagement",
-      "integrityHelp": "https://support.google.com/googleplay/android-developer/answer/9842756?hl=fr"
+      "integrityHelp": "https://support.google.com/googleplay/android-developer/answer/9842756?hl=fr",
+      "usersAndPermissions": "https://play.google.com/console/u/0/developers/PLAY_DEVELOPER_ID/users-and-permissions",
+      "apiAccess": "https://play.google.com/console/u/0/developers/PLAY_DEVELOPER_ID/api-access"
     },
     "gemini": {
       "apiKeys": "https://aistudio.google.com/apikey"

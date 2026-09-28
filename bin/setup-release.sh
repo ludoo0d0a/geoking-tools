@@ -128,7 +128,7 @@ step_play(){
   blank
   step "3. Play Console → Utilisateurs et permissions → Inviter le client_email du JSON"
   hint "Rôle : Gestionnaire de releases (accès à l'app $APP_ID)"
-  show_url "$PLAY_APP_DASHBOARD"
+  show_url "$PLAY_USERS_AND_PERMISSIONS"
   blank
   step "4. Enregistrer le JSON téléchargé exactement ici, puis relancer :"
   code "cp ~/Downloads/<fichier>.json scripts/.play-service-account.json"

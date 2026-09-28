@@ -47,6 +47,14 @@ gk_manifest_load() {
   gk_manifest_export PLAY_APP_INTEGRITY "$(gk_manifest_jq "$json" '.urls.play.integrity')"
   gk_manifest_export PLAY_INTEGRITY_HELP "$(gk_manifest_jq "$json" '.urls.play.integrityHelp')"
   gk_manifest_export PLAY_CONSOLE "$(gk_manifest_jq "$json" '.urls.play.dashboard')"
+  local play_users
+  play_users="$(gk_manifest_jq "$json" '.urls.play.usersAndPermissions // empty')"
+  if [ -z "$play_users" ]; then
+    local dev_id
+    dev_id="$(gk_manifest_jq "$json" '.urls.play.developerId // empty')"
+    [ -n "$dev_id" ] && play_users="https://play.google.com/console/u/0/developers/${dev_id}/users-and-permissions"
+  fi
+  gk_manifest_export PLAY_USERS_AND_PERMISSIONS "$play_users"
   gk_manifest_export GEMINI_API_KEYS "$(gk_manifest_jq "$json" '.urls.gemini.apiKeys // "https://aistudio.google.com/apikey"')"
   gk_manifest_export GITHUB_ACTIONS_SECRETS "$(gk_manifest_jq "$json" '.urls.github.actionsSecrets // "https://github.com/settings/secrets/actions"')"
 
