@@ -9,7 +9,9 @@ os.environ.setdefault("GK_PROJECT_ROOT", ROOT)
 
 for candidate in (
     os.environ.get("GK_TOOLS"),
+    os.path.join(ROOT, "geoking-tools"),
     os.path.join(ROOT, "..", "geoking-tools"),
+    os.path.join(ROOT, "..", "..", "geoking-tools"),
     os.path.expanduser("~/dev/android/geoking-tools"),
 ):
     if candidate and os.path.isdir(candidate):

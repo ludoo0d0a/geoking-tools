@@ -164,9 +164,15 @@ fi
 
 # --- whatsnew ---
 subhead "Release notes"
+# Prefer tools bin: scripts/whatsnew.py may still be a bash-wrapper symlink
+# from older link-scripts runs (breaks `python3 scripts/whatsnew.py`).
 WHATSNEW_PY=""
-for c in "$SCRIPTS/whatsnew.py" "$GK_TOOLS/bin/whatsnew.py"; do
-  [ -f "$c" ] && { WHATSNEW_PY="$c"; break; }
+for c in "$GK_TOOLS/bin/whatsnew.py" "$SCRIPTS/whatsnew.py"; do
+  [ -f "$c" ] || continue
+  # Skip bash wrapper mistakenly named *.py
+  head -1 "$c" 2>/dev/null | grep -q python || continue
+  WHATSNEW_PY="$c"
+  break
 done
 [ -n "$WHATSNEW_PY" ] || die "whatsnew.py introuvable"
 GK_PROJECT_ROOT="$ROOT" python3 "$WHATSNEW_PY" "$VERSION_CODE"
