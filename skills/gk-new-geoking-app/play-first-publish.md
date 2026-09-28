@@ -2,6 +2,7 @@
 
 Companion to `gk-new-geoking-app`. Store durable answers in the app’s  
 `scripts/project.manifest.json` → `playConsole` (see `templates/play-console.fragment.json`).  
+Create / update via **gk-project-manifest** (`./scripts/project-manifest.sh`).  
 Arthur is the filled reference.
 
 ## Order that unblocks “Send for review”
@@ -20,6 +21,21 @@ Arthur is the filled reference.
 12. Publishing overview → send changes when Send is enabled.
 
 ## Automation
+
+```bash
+# Manifest (IDs + playConsole skeleton)
+./scripts/project-manifest.sh apply --play-developer-id <id> --play-app-id <id>
+./scripts/project-manifest.sh validate
+
+# First-publish answers
+./scripts/play-console.sh validate
+./scripts/play-console.sh checklist
+./scripts/play-console.sh apply-details --dry-run
+./scripts/play-console.sh apply-data-safety --dry-run
+./scripts/listing-cli.sh links
+```
+
+Or call the tools tree directly:
 
 ```bash
 export GK_TOOLS="${GK_TOOLS:-../geoking-tools}"

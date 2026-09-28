@@ -35,28 +35,12 @@ mkdir -p scripts .github/workflows
 "$TOOLS/bin/link-scripts.sh"
 
 
-if [ ! -f scripts/project.manifest.json ]; then
-  cp "$TOOLS/templates/project.manifest.template.json" scripts/project.manifest.json
-  if [ -n "$PACKAGE" ]; then
-    command -v jq >/dev/null 2>&1 || { echo "jq requis pour --package" >&2; exit 1; }
-    tmp="$(mktemp)"
-    jq --arg p "$PACKAGE" --arg n "${APP_NAME:-App}" \
-      '.project.package = $p | .project.name = $n | .build.keystoreDn = ("CN=" + $n + ", OU=GeoKing, O=GeoKing, L=Paris, C=FR") | .build.signInLogTag = ($n + "SignIn")' \
-      scripts/project.manifest.json > "$tmp"
-    mv "$tmp" scripts/project.manifest.json
-  fi
-  echo "✓ scripts/project.manifest.json créé — complète les URLs consoles et playConsole"
-else
-  echo "· scripts/project.manifest.json existe déjà — conservé"
-fi
-if command -v jq >/dev/null 2>&1 && [ -f scripts/project.manifest.json ] && [ -f "$TOOLS/templates/play-console.fragment.json" ]; then
-  if ! jq -e '.playConsole.appType' scripts/project.manifest.json >/dev/null 2>&1; then
-    tmp="$(mktemp)"
-    jq -s '.[0] * .[1]' scripts/project.manifest.json "$TOOLS/templates/play-console.fragment.json" > "$tmp"
-    mv "$tmp" scripts/project.manifest.json
-    echo "✓ playConsole fusionné depuis play-console.fragment.json — remplace les TODO"
-  fi
-fi
+# Manifest via dedicated CLI (init + optional package/name).
+init_args=()
+[ -n "$PACKAGE" ] && init_args+=(--package "$PACKAGE")
+[ -n "$APP_NAME" ] && init_args+=(--name "$APP_NAME")
+"$TOOLS/bin/project-manifest.sh" init "${init_args[@]+"${init_args[@]}"}"
+echo "  → complète Play/Firebase IDs : ./scripts/project-manifest.sh apply --project-id …"
 
 # --- CI ---
 if [ ! -f .github/workflows/android-ci.yml ]; then
@@ -158,7 +142,8 @@ fi
 
 echo
 echo "Prochaines étapes :"
-echo "  1. Édite scripts/project.manifest.json (URLs Firebase, GCP, Play)"
-echo "  2. Guide complet : $TOOLS/INTEGRATION.md"
-echo "  3. ./scripts/setup-release.sh"
-echo "  4. Pousse geoking-ci sur GitHub (public) avant le premier run CI"
+echo "  1. ./scripts/project-manifest.sh apply --project-id … --play-developer-id … --play-app-id …"
+echo "  2. ./scripts/project-manifest.sh validate"
+echo "  3. Guide : $TOOLS/INTEGRATION.md  ·  skill gk-project-manifest"
+echo "  4. ./scripts/setup-release.sh"
+echo "  5. Pousse geoking-ci sur GitHub (public) avant le premier run CI"

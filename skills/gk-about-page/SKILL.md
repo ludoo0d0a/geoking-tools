@@ -162,7 +162,14 @@ Ship static pages next to the landing:
 - `website/terms.html` (+ optional `terms.md`)
 - Footer links on `index.html` (EN/FR i18n keys if the landing uses them)
 
-`scripts/project.manifest.json`:
+`scripts/project.manifest.json` (via **gk-project-manifest**):
+
+```bash
+./scripts/project-manifest.sh apply --website https://<slug>.geoking.fr
+# or:
+./scripts/project-manifest.sh set .urls.website.policy 'https://<slug>.geoking.fr/privacy.html'
+./scripts/project-manifest.sh set .urls.website.terms 'https://<slug>.geoking.fr/terms.html'
+```
 
 ```json
 "urls": {

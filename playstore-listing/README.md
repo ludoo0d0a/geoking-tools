@@ -18,14 +18,26 @@ python3 "$GK_TOOLS/playstore-listing/validate_screenshots.py" --help
 ## First-publish answers (`playConsole`)
 
 Store Console questionnaires in the **app** repo: `scripts/project.manifest.json` → `playConsole`.
-Copy the skeleton from [`templates/play-console.fragment.json`](../templates/play-console.fragment.json).
-Put the Data safety CSV next to listing copy: `scripts/playstore/data_safety.csv`.
+
+Preferred (skill **gk-project-manifest**):
+
+```bash
+./scripts/project-manifest.sh init --package fr.geoking.myapp --name MyApp
+./scripts/project-manifest.sh merge-play-console   # if playConsole missing
+./scripts/project-manifest.sh set .playConsole.contact.email hello@geoking.fr
+./scripts/project-manifest.sh validate
+./scripts/play-console.sh validate
+./scripts/play-console.sh checklist
+```
+
+Skeleton: [`templates/play-console.fragment.json`](../templates/play-console.fragment.json).  
+Data safety CSV: `scripts/playstore/data_safety.csv`.
 
 Arthur is the filled reference. For a new app:
 
-1. Copy `playConsole` from the fragment (or from Arthur) and replace TODOs.
+1. Ensure `playConsole` via `project-manifest.sh` (init / merge-play-console) and replace TODOs.
 2. Copy/adapt `data_safety.csv`.
-3. `play_console.py validate` then `checklist` while filling Play Console.
+3. `./scripts/play-console.sh validate` then `checklist` while filling Play Console.
 4. Optional API: `apply-details` / `apply-data-safety` (needs Play SA). Government, health, IARC, ads ID purposes, and FGS still need the Console UI.
 
 Install deps: `pip install -r "$GK_TOOLS/playstore-listing/requirements.txt"`

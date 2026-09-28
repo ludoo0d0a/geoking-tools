@@ -3,6 +3,7 @@
 Scripts partagés pour les apps Android GeoKing (release Play, OAuth, adb, build local).
 
 > **Nouvelle app ?** → skill **[gk-new-geoking-app](skills/gk-new-geoking-app/SKILL.md)** (wizard zero → GitHub Actions → Play internal) + **[INTEGRATION.md](INTEGRATION.md)**  
+> **Manifest ?** → skill **[gk-project-manifest](skills/gk-project-manifest/SKILL.md)** + `./scripts/project-manifest.sh`  
 > **In-App Updates ?** → skill **[gk-play-in-app-updates](skills/gk-play-in-app-updates/SKILL.md)** (Gaston phone pattern)  
 > **Settings / Theme / i18n ?** → **[gk-settings](skills/gk-settings/SKILL.md)** · **[gk-theme](skills/gk-theme/SKILL.md)** · **[gk-i18n](skills/gk-i18n/SKILL.md)**  
 > **Debug bar (Compose) ?** → skill **[gk-debug-bar](skills/gk-debug-bar/SKILL.md)** + library `android/debug-bar` (`fr.geoking.tools:debug-bar`, includeBuild)
@@ -49,12 +50,26 @@ Ou : `export GK_TOOLS=~/dev/android/geoking-tools`
 
 Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets, CI).
 
+## Manifest projet (`project.manifest.json`)
+
+Source de vérité **par app** (package, IDs Firebase/Play, module Gradle, `playConsole`).
+
+```bash
+./scripts/project-manifest.sh init --package fr.geoking.myapp --name MyApp --module :composeApp
+./scripts/project-manifest.sh apply --project-id … --play-developer-id … --play-app-id …
+./scripts/project-manifest.sh validate
+```
+
+Skill agent : **[gk-project-manifest](skills/gk-project-manifest/SKILL.md)**.  
+Ne pas confondre avec `templates/project.manifest.json` (catalogue DNS GeoKing).
+
 ## Scripts
 
 | Script | Rôle |
 |---|---|
 | `link-scripts.sh` | Symlink `geoking-tools/` + entrypoints `scripts/*` (réf. unique) |
 | `gk` | Dispatcher `./scripts/gk <cmd>` / `--list` |
+| `project-manifest.sh` | Crée / met à jour / valide `scripts/project.manifest.json` |
 | `setup-release.sh` | Assistant release (keystore, Play, Firebase, OAuth, Gemini) |
 | `show-secrets.sh` | Récap secrets locaux vs GitHub |
 | `pull-google-services.sh` | Télécharge `google-services.json` + `WEB_CLIENT_ID` |
@@ -93,6 +108,7 @@ Voir [INTEGRATION.md](INTEGRATION.md) pour le détail (manifest, Gradle, secrets
 | `templates/wrangler.toml` | Config Pages (`pages_build_output_dir = "website"`) |
 | `INTEGRATION.md` | Guide d'intégration complet |
 | `skills/gk-new-geoking-app/` | Skill/wizard : app from zero → CI → Play internal |
+| `skills/gk-project-manifest/` | Skill : créer / maj `project.manifest.json` |
 | `skills/gk-website-sync/` | Skill : monorepo `website/` ↔ screenshots + Cloudflare CI (Scora pattern) |
 | `skills/gk-play-in-app-updates/` | Skill : Play In-App Updates phone (Gaston; Scora extras optional) |
 | `skills/gk-settings/` | Skill : phone Settings hub (Gaston / Arthur) |

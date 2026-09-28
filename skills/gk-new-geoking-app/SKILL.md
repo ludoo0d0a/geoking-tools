@@ -105,7 +105,9 @@ Expect: `scripts/` wrappers, `project.manifest.json` (+ `playConsole` fragment),
 
 Agent must then:
 
-1. Set `build.gradleModule` / `googleServices` / `mainActivity` in the manifest to match the scaffold.
+1. Via **gk-project-manifest** / `./scripts/project-manifest.sh apply` — set
+   `build.gradleModule` / `googleServices` / `mainActivity` (or `--module :androidApp`)
+   to match the scaffold.
 2. Patch `release-play.yml` `package_name` and `android-ci.yml` `artifact_name`.
 3. If module ≠ `:composeApp`, set workflow `gradle_module`, `apk_glob`, `aab_glob` (see INTEGRATION.md).
 4. Apply Gradle signing + `VERSION_CODE`/`VERSION_NAME` + BuildConfig secrets from **gk-ci** / INTEGRATION §4 (env-based keystore; never commit `.keystore`).
@@ -131,7 +133,14 @@ Do **not** expect the first Actions run to publish until secrets exist (phase 5)
 ## Phase 4 — Firebase
 
 1. Create Firebase/GCP project (or reuse) with Android app = package.
-2. Put IDs into `scripts/project.manifest.json` (`project.id`, `firebaseAndroidAppId`, `urls.firebase.*`).
+2. Fill IDs via **gk-project-manifest**:
+
+```bash
+./scripts/project-manifest.sh apply \
+  --project-id <gcp-id> \
+  --firebase-android-app-id '1:…:android:…'
+```
+
 3. `firebase login` then:
 
 ```bash
@@ -160,15 +169,23 @@ Play SA permissions: testing tracks + (for listing) store presence — see
 ## Phase 6 — Play Console shell + manifest
 
 1. Create the app in Play Console (default language, app type).
-2. Copy `developerId` + `appId` into `urls.play.*` (dashboard / listing / publishing URLs).
-3. Fill `playConsole` (contact, category, declarations). Template:  
-   `templates/play-console.fragment.json`. Filled reference: **arthur**  
-   `scripts/project.manifest.json`.
-4. Validate:
+2. Apply IDs via **gk-project-manifest**:
 
 ```bash
-python3 "$GK_TOOLS/playstore-listing/play_console.py" validate
-python3 "$GK_TOOLS/playstore-listing/play_console.py" checklist
+./scripts/project-manifest.sh apply \
+  --play-developer-id <id> \
+  --play-app-id <id>
+./scripts/project-manifest.sh validate
+```
+
+3. Fill remaining `playConsole` TODOs (`set` / edit): contact email, category,
+   declarations. Template: `templates/play-console.fragment.json`. Reference:
+   **arthur** `scripts/project.manifest.json`.
+4. Validate Play answers:
+
+```bash
+./scripts/play-console.sh validate
+./scripts/play-console.sh checklist
 ```
 
 Console UI still required for IARC, some declarations, and ads-ID purpose checkboxes when the APK merges `AD_ID` (Firebase Analytics → usually **Yes + Analytics**).

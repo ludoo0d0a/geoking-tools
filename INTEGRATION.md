@@ -2,7 +2,9 @@
 
 Guide pas-à-pas pour brancher release Play, OAuth/Firebase, scripts locaux et CI GitHub Actions sur un projet Android KMP (Compose).
 
-**App from zero (wizard) :** skill [`skills/gk-new-geoking-app`](skills/gk-new-geoking-app/SKILL.md) — scaffold → GitHub → secrets → listing → first **internal** Play upload. This document is the detailed reference that skill points to.
+**App from zero (wizard) :** skill [`skills/gk-new-geoking-app`](skills/gk-new-geoking-app/SKILL.md) — scaffold → GitHub → secrets → listing → first **internal** Play upload.  
+**Manifest only :** skill [`skills/gk-project-manifest`](skills/gk-project-manifest/SKILL.md) + `./scripts/project-manifest.sh`.  
+This document is the detailed reference those skills point to.
 
 **Référence :** [vincent](https://github.com/ludoo0d0a/vincent) est l'app modèle ; [arthur](https://github.com/ludoo0d0a/arthur) pour `playConsole` / first-publish.
 
@@ -14,7 +16,9 @@ Depuis la racine de la nouvelle app :
 ../geoking-tools/templates/bootstrap-new-app.sh --package fr.geoking.myapp --name MyApp
 ```
 
-Puis complète `scripts/project.manifest.json` et lance `./scripts/setup-release.sh`. Le reste de ce guide détaille chaque étape manuellement.
+Puis `./scripts/project-manifest.sh apply …` (IDs Firebase/Play) + `./scripts/setup-release.sh`.
+Skill dédié : [`skills/gk-project-manifest`](skills/gk-project-manifest/SKILL.md).
+Le reste de ce guide détaille chaque étape manuellement.
 
 ---
 
@@ -45,14 +49,15 @@ Alternative : `export GK_TOOLS=~/chemin/vers/geoking-tools` si le clone n'est pa
 
 ## Checklist rapide
 
-- [ ] 1. Créer `scripts/` + `project.manifest.json`
-- [ ] 2. Copier les wrappers shell + `whatsnew.py`
+- [ ] 1. Créer `scripts/` + `project.manifest.json` (`./scripts/project-manifest.sh init`)
+- [ ] 2. Copier les wrappers shell + `whatsnew.py` (`link-scripts.sh` / bootstrap)
 - [ ] 3. Mettre à jour `.gitignore`
 - [ ] 4. Adapter `composeApp/build.gradle.kts` (secrets, signing, version)
 - [ ] 5. Ajouter `playstore/version.properties` + `playstore/whatsnew.xml`
 - [ ] 6. Ajouter les workflows CI dans `.github/workflows/`
-- [ ] 7. Lancer `./scripts/setup-release.sh` (wizard secrets + keystore)
-- [ ] 8. Pousser `geoking-ci` sur GitHub avant le premier run CI
+- [ ] 7. Remplir IDs Play/Firebase (`./scripts/project-manifest.sh apply` + `validate`)
+- [ ] 8. Lancer `./scripts/setup-release.sh` (wizard secrets + keystore)
+- [ ] 9. Pousser `geoking-ci` sur GitHub avant le premier run CI
 
 ---
 
@@ -60,7 +65,16 @@ Alternative : `export GK_TOOLS=~/chemin/vers/geoking-tools` si le clone n'est pa
 
 Crée `scripts/project.manifest.json` — source de vérité pour package, consoles et build.
 
-Copie le template :
+CLI dédiée (skill **gk-project-manifest**) :
+
+```bash
+../geoking-tools/bin/link-scripts.sh   # une fois
+./scripts/project-manifest.sh init --package fr.geoking.myapp --name MyApp --module :composeApp
+./scripts/project-manifest.sh apply --project-id myapp-123 --play-developer-id ID --play-app-id ID
+./scripts/project-manifest.sh validate
+```
+
+Ou copie manuelle du template :
 
 ```bash
 cp ../geoking-tools/templates/project.manifest.template.json scripts/project.manifest.json
@@ -424,13 +438,18 @@ Tous dans `geoking-tools/templates/` :
 
 | Fichier | Destination dans l'app |
 |---|---|
-| `project.manifest.template.json` | `scripts/project.manifest.json` |
-| `play-console.fragment.json` | merged into `playConsole` of the app manifest |
+| `project.manifest.template.json` | seed pour `bin/project-manifest.sh init` → `scripts/project.manifest.json` |
+| `play-console.fragment.json` | merged into `playConsole` via `project-manifest.sh merge-play-console` |
 | `_geoking-wrapper.sh` | `scripts/_geoking-wrapper.sh` |
-| `script-stub.sh` | `scripts/<nom>.sh` (un par script) |
+| `script-stub.sh` | legacy — préférer `link-scripts.sh` |
 | `whatsnew.py` | `scripts/whatsnew.py` |
 | `android-ci.yml` | `.github/workflows/android-ci.yml` |
 | `release-play.yml` | `.github/workflows/release-play.yml` |
+
+| Script / skill | Rôle |
+|---|---|
+| `bin/project-manifest.sh` | Créer / maj / valider le manifest app |
+| `skills/gk-project-manifest/` | Skill agent pour le même flux |
 
 ---
 
@@ -464,6 +483,9 @@ bash "$GK_TOOLS/playstore-listing/translate-listing.sh"
 python3 "$GK_TOOLS/playstore-listing/validate_screenshots.py"
 
 # Play Console first-publish snapshot (playConsole in project.manifest.json)
+./scripts/play-console.sh validate
+./scripts/play-console.sh checklist
+# or:
 python3 "$GK_TOOLS/playstore-listing/play_console.py" validate
 python3 "$GK_TOOLS/playstore-listing/play_console.py" checklist
 ```

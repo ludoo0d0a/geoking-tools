@@ -14,7 +14,7 @@ Use with the `gk-new-geoking-app` skill. Tick in order.
 
 - [ ] Project builds (`assembleDebug`)
 - [ ] `bootstrap-new-app.sh` run
-- [ ] Manifest IDs + `playConsole` TODOs replaced
+- [ ] `./scripts/project-manifest.sh apply` (IDs) + `validate` ; `playConsole` TODOs replaced
 - [ ] Workflows: `package_name`, `artifact_name`, module globs
 - [ ] Gradle: JDK 21, signing env, VERSION_* from playstore/
 - [ ] `gh repo create` + push `main`
@@ -30,8 +30,8 @@ Use with the `gk-new-geoking-app` skill. Tick in order.
 
 ## Play Console
 
-- [ ] App created; `developerId` / `appId` in manifest
-- [ ] `play_console.py validate` + `checklist`
+- [ ] App created; `./scripts/project-manifest.sh apply --play-developer-id … --play-app-id …`
+- [ ] `./scripts/play-console.sh validate` + `checklist`
 - [ ] Listing EN (+ FR); icon 512; feature graphic
 - [ ] Screenshots validated
 - [ ] Data safety CSV uploaded / Console Traitée
