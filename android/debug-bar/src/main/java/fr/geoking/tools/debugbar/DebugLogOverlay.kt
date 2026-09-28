@@ -177,41 +177,45 @@ private fun DebugLogOverlayContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                when (selectedTab) {
-                                    DebugOverlayTab.Network -> "Network (${logs.size})"
-                                    DebugOverlayTab.Providers -> "Providers (${providerTraces.size})"
-                                    DebugOverlayTab.DataConsumption -> "Data Usage (${hostConsumptionMap.size})"
-                                },
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TooltipBox(
-                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text("Disable cache") } },
-                                state = rememberTooltipState()
-                            ) {
-                                IconButton(onClick = { onDisableCacheChange(!disableCache) }) {
-                                    Icon(
-                                        imageVector = if (disableCache) Icons.Default.CloudOff else Icons.Default.Cloud,
-                                        contentDescription = "Disable cache",
-                                        tint = if (disableCache) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text("Disable cache") } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = { onDisableCacheChange(!disableCache) }) {
+                                Icon(
+                                    imageVector = if (disableCache) Icons.Default.CloudOff else Icons.Default.Cloud,
+                                    contentDescription = "Disable cache",
+                                    tint = if (disableCache) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurface
+                                )
                             }
+                        }
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text("Clear cache") } },
+                            state = rememberTooltipState()
+                        ) {
                             IconButton(onClick = onClearCaches) {
                                 Icon(Icons.Default.Refresh, "Clear cache", tint = MaterialTheme.colorScheme.onSurface)
                             }
+                        }
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text("Clear logs") } },
+                            state = rememberTooltipState()
+                        ) {
                             IconButton(onClick = onClearLogs) {
                                 Icon(Icons.Default.DeleteSweep, "Clear logs", tint = MaterialTheme.colorScheme.onSurface)
                             }
+                        }
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text("Close") } },
+                            state = rememberTooltipState()
+                        ) {
                             IconButton(onClick = { onExpandedChange(false) }) {
                                 Icon(Icons.Default.Close, "Close", tint = MaterialTheme.colorScheme.onSurface)
                             }
@@ -286,42 +290,6 @@ private fun formatBytes(bytes: Long): String {
 }
 
 @Composable
-private fun DataUsageSummary() {
-    val rx = android.net.TrafficStats.getUidRxBytes(android.os.Process.myUid())
-    val tx = android.net.TrafficStats.getUidTxBytes(android.os.Process.myUid())
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                "App Data Consumption (since boot)",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Received", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
-                    Text(formatBytes(rx), color = Color(0xFF4ADE80), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Sent", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
-                    Text(formatBytes(tx), color = Color(0xFF60A5FA), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun NetworkDebugTab(
     logs: List<NetworkLog>,
     availableHosts: List<String>,
@@ -339,8 +307,6 @@ private fun NetworkDebugTab(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
-
-        DataUsageSummary()
 
         if (availableHosts.isNotEmpty()) {
             LazyRow(
@@ -914,6 +880,15 @@ private fun DataConsumptionTab(
     onResetClick: () -> Unit,
 ) {
     val totalBytes = totalSent + totalReceived
+    var selectedHost by remember { mutableStateOf<String?>(null) }
+    val availableHosts = remember(hostConsumptions) {
+        hostConsumptions.map { it.host }.filter { it.isNotEmpty() }.distinct().sorted()
+    }
+    val filteredConsumptions = if (selectedHost == null) {
+        hostConsumptions
+    } else {
+        hostConsumptions.filter { it.host == selectedHost }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Card(
@@ -984,7 +959,31 @@ private fun DataConsumptionTab(
             }
         }
 
-        if (hostConsumptions.isEmpty()) {
+        if (availableHosts.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    HostFilterChip(
+                        label = "All",
+                        selected = selectedHost == null,
+                        onClick = { selectedHost = null },
+                    )
+                }
+                items(availableHosts) { host ->
+                    HostFilterChip(
+                        label = host,
+                        selected = selectedHost == host,
+                        onClick = { selectedHost = if (selectedHost == host) null else host },
+                    )
+                }
+            }
+        }
+
+        if (filteredConsumptions.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -998,12 +997,12 @@ private fun DataConsumptionTab(
                 )
             }
         } else {
-            val maxBytes = remember(hostConsumptions) {
-                hostConsumptions.maxOfOrNull { it.totalBytes }?.coerceAtLeast(1L) ?: 1L
+            val maxBytes = remember(filteredConsumptions) {
+                filteredConsumptions.maxOfOrNull { it.totalBytes }?.coerceAtLeast(1L) ?: 1L
             }
 
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(hostConsumptions, key = { it.host }) { hostData ->
+                items(filteredConsumptions, key = { it.host }) { hostData ->
                     HostConsumptionItem(hostData = hostData, maxBytes = maxBytes)
                 }
             }
