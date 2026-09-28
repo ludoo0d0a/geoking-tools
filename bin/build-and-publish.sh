@@ -263,6 +263,9 @@ if [ "$SKIP_REVIEW" = true ]; then
 fi
 ok "Upload versionCode=${VERSION_CODE} versionName=${VERSION_NAME} track=${TRACK}"
 
+gk_play_check_access "$TOKEN" "$SA_FILE" \
+  || die "Play API refusée (403/401) — invite le compte de service dans Play Console."
+
 COMMIT_JSON="$(gk_play_release_aab "$TOKEN" "$AAB" "$TRACK" "$SKIP_REVIEW" "$STATUS")" \
   || die "Échec upload / commit Play."
 EDIT_ID="$(printf '%s' "$COMMIT_JSON" | jq -r '.id // empty' 2>/dev/null || true)"

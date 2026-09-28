@@ -124,6 +124,9 @@ step_play(){
   blank
   step "2. Ouvrir Comptes de service → créer (ou ouvrir) le compte Play → Clés → Ajouter une clé → JSON"
   show_url "$GCP_SERVICE_ACCOUNTS"
+  if [ -n "${PLAY_SERVICE_ACCOUNT_EMAIL:-}" ]; then
+    hint "Compte attendu : ${c_bold}${PLAY_SERVICE_ACCOUNT_EMAIL}${c_off}"
+  fi
   hint "Le navigateur télécharge un fichier …-xxxxx.json"
   blank
   step "3. Play Console → Utilisateurs et permissions → Inviter le client_email du JSON"

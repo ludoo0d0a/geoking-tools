@@ -41,6 +41,14 @@ gk_manifest_load() {
   gk_manifest_export GCP_OAUTH_CONSENT "$(gk_manifest_jq "$json" '.urls.gcp.oauthConsent')"
   gk_manifest_export GCP_PLAY_API "$(gk_manifest_jq "$json" '.urls.gcp.playDeveloperApi // .urls.gcp.console')"
   gk_manifest_export GCP_SERVICE_ACCOUNTS "$(gk_manifest_jq "$json" '.urls.gcp.serviceAccounts // .urls.gcp.console')"
+  # Prefer Play-linked GCP project for the upload service-account wizard when set.
+  local play_sa_url
+  play_sa_url="$(gk_manifest_jq "$json" '.urls.gcp.playServiceAccounts // empty')"
+  [ -n "$play_sa_url" ] && gk_manifest_export GCP_SERVICE_ACCOUNTS "$play_sa_url"
+  local play_api_url
+  play_api_url="$(gk_manifest_jq "$json" '.urls.gcp.playDeveloperApi // empty')"
+  [ -n "$play_api_url" ] && gk_manifest_export GCP_PLAY_API "$play_api_url"
+  gk_manifest_export PLAY_SERVICE_ACCOUNT_EMAIL "$(gk_manifest_jq "$json" '.project.playServiceAccountEmail // empty')"
   gk_manifest_export PLAY_DEVELOPER_ID "$(gk_manifest_jq "$json" '.urls.play.developerId')"
   gk_manifest_export PLAY_APP_ID "$(gk_manifest_jq "$json" '.urls.play.appId')"
   gk_manifest_export PLAY_APP_DASHBOARD "$(gk_manifest_jq "$json" '.urls.play.dashboard')"

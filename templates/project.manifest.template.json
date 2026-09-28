@@ -4,7 +4,9 @@
     "name": "MyApp",
     "package": "fr.geoking.myapp",
     "storageBucket": "my-gcp-project-id.firebasestorage.app",
-    "firebaseAndroidAppId": "1:PROJECT_NUMBER:android:APP_HASH"
+    "firebaseAndroidAppId": "1:PROJECT_NUMBER:android:APP_HASH",
+    "playGcpProjectId": "my-play-gcp-project-id",
+    "playServiceAccountEmail": "sa-myapp@my-play-gcp-project-id.iam.gserviceaccount.com"
   },
   "build": {
     "gradleModule": ":composeApp",
@@ -32,8 +34,9 @@
       "console": "https://console.cloud.google.com/welcome?project=my-gcp-project-id",
       "credentials": "https://console.cloud.google.com/apis/credentials?project=my-gcp-project-id",
       "oauthConsent": "https://console.cloud.google.com/apis/credentials/consent?project=my-gcp-project-id",
-      "playDeveloperApi": "https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com?project=my-gcp-project-id",
-      "serviceAccounts": "https://console.cloud.google.com/iam-admin/serviceaccounts?project=my-gcp-project-id"
+      "playDeveloperApi": "https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com?project=my-play-gcp-project-id",
+      "serviceAccounts": "https://console.cloud.google.com/iam-admin/serviceaccounts?project=my-gcp-project-id",
+      "playServiceAccounts": "https://console.cloud.google.com/iam-admin/serviceaccounts?project=my-play-gcp-project-id"
     },
     "play": {
       "developerId": "PLAY_DEVELOPER_ID",

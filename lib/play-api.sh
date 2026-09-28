@@ -87,6 +87,45 @@ gk_play_api() {
     "$@"
 }
 
+# Verify the service account can call the Play Developer API for this package.
+# Prints a clear invite hint on 403 (common when using Firebase Admin SA before Play invite).
+gk_play_check_access() {
+  local token="$1"
+  local sa_file="${2:-}"
+  local tmp code email=""
+  need curl jq
+  tmp="$(mktemp)"
+  code="$(curl -sS -o "$tmp" -w '%{http_code}' \
+    -X POST "${PLAY_API_BASE}/${APP_ID}/edits" \
+    -H "Authorization: Bearer ${token}" \
+    -H "Content-Type: application/json" \
+    -d '{}')"
+  if [ "$code" = "200" ]; then
+    local edit
+    edit="$(jq -r '.id // empty' "$tmp")"
+    rm -f "$tmp"
+    [ -n "$edit" ] || return 1
+    gk_play_edit_delete "$token" "$edit"
+    return 0
+  fi
+  if [ -n "$sa_file" ] && [ -f "$sa_file" ]; then
+    email="$(jq -r '.client_email // empty' "$sa_file")"
+  fi
+  echo "Play API HTTP ${code} pour ${APP_ID}:" >&2
+  cat "$tmp" >&2
+  echo >&2
+  rm -f "$tmp"
+  if [ "$code" = "403" ] || [ "$code" = "401" ]; then
+    echo "Le compte de service n'a pas le droit Play Developer API sur cette app." >&2
+    [ -n "$email" ] && echo "  client_email : ${email}" >&2
+    echo "  1. Play Console → Utilisateurs et permissions → Inviter ${email:-le client_email du JSON}" >&2
+    echo "  2. Rôle : Gestionnaire de releases (accès à l'app ${APP_ID})" >&2
+    [ -n "${PLAY_USERS_AND_PERMISSIONS:-}" ] && echo "  3. ${PLAY_USERS_AND_PERMISSIONS}" >&2
+    echo "  Puis attendre ~15–60 min avant de relancer." >&2
+  fi
+  return 1
+}
+
 gk_play_edit_insert() {
   local token="$1"
   gk_play_api POST "${APP_ID}/edits" "$token" | jq -r '.id // empty'
