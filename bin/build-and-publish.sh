@@ -4,14 +4,13 @@
 # Mirrors geoking-ci release-play.yml: unit tests → signed AAB → whatsnew → Play upload.
 #
 # Usage (from an app via thin wrapper):
-#   ./scripts/build-and-publish.sh
-#   ./scripts/build-and-publish.sh --track internal
+#   ./scripts/build-and-publish.sh                 # defaults: -y --track internal
 #   ./scripts/build-and-publish.sh --track alpha --skip-tests
 #   ./scripts/build-and-publish.sh 42 1.0.1          # force versionCode / versionName
 #   ./scripts/build-and-publish.sh --aab path.aab    # skip build, upload existing AAB
 #   ./scripts/build-and-publish.sh --dry-run         # build + whatsnew only
 #   ./scripts/build-and-publish.sh --skip-review     # changesNotSentForReview=true
-#   ./scripts/build-and-publish.sh -y                # also bump version.properties without prompt
+#   ./scripts/build-and-publish.sh -i|--interactive  # prompt before bumping version.properties
 #
 set -euo pipefail
 
@@ -26,7 +25,7 @@ TRACK=internal
 SKIP_TESTS=false
 SKIP_REVIEW=false
 DRY_RUN=false
-ASSUME_YES=false
+ASSUME_YES=true
 STATUS=completed
 EXISTING_AAB=""
 FORCE_VC=""
@@ -34,7 +33,7 @@ FORCE_VN=""
 UNIT_TEST_TASKS=""
 
 usage() {
-  sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
@@ -51,6 +50,7 @@ while [ $# -gt 0 ]; do
     --skip-review) SKIP_REVIEW=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     -y|--yes) ASSUME_YES=true; shift ;;
+    -i|--interactive) ASSUME_YES=false; shift ;;
     --draft) STATUS=draft; shift ;;
     --aab) EXISTING_AAB="${2:?}"; shift 2 ;;
     --unit-test-tasks) UNIT_TEST_TASKS="${2:?}"; shift 2 ;;
