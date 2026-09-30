@@ -24,11 +24,23 @@ internal fun limitJsonArrays(element: JsonElement, maxItems: Int = 20): JsonElem
     }
 }
 
+/**
+ * Parses [body] as a JSON **object or array** only.
+ * CSV, plain text, numbers, or quoted strings return null so they render as raw text.
+ */
 internal fun parseAndLimitJson(body: String, maxItems: Int = 20): JsonElement? {
     if (body.isBlank()) return null
+    // Avoid parsing multi-megabyte blobs; caller should truncate first.
+    if (body.length > 256 * 1024) return null
+    val trimmed = body.trimStart()
+    val first = trimmed.firstOrNull() ?: return null
+    // Only structured JSON — not primitives (would steal CSV / plain text / numbers).
+    if (first != '{' && first != '[') return null
     return try {
-        val parsed = Json.parseToJsonElement(body)
-        limitJsonArrays(parsed, maxItems)
+        when (val parsed = Json.parseToJsonElement(trimmed)) {
+            is JsonObject, is JsonArray -> limitJsonArrays(parsed, maxItems)
+            else -> null
+        }
     } catch (_: Throwable) {
         null
     }

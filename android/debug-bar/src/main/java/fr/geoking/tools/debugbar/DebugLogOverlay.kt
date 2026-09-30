@@ -289,6 +289,64 @@ private fun formatBytes(bytes: Long): String {
     return String.format("%.1f %sB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
 }
 
+/** Compact size for list rows: `12B`, `1.2KB`, `3.4MB`. */
+private fun formatBytesCompact(bytes: Long): String {
+    if (bytes < 1024) return "${bytes}B"
+    val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt().coerceAtMost(5)
+    val pre = "KMGTPE"[exp - 1]
+    val value = bytes / Math.pow(1024.0, exp.toDouble())
+    return if (value >= 10) {
+        String.format("%.0f%sB", value, pre)
+    } else {
+        String.format("%.1f%sB", value, pre)
+    }
+}
+
+private fun formatTransferSizes(requestBytes: Long, responseBytes: Long): String {
+    val parts = mutableListOf<String>()
+    if (requestBytes > 0) parts += "↑${formatBytesCompact(requestBytes)}"
+    if (responseBytes > 0) parts += "↓${formatBytesCompact(responseBytes)}"
+    return parts.joinToString(" ")
+}
+
+/** Cap body text before Compose/JSON parsing to avoid OOM on huge payloads (any format). */
+private const val MAX_DISPLAY_BODY_CHARS = 64 * 1024
+/** Cap line count for CSV / plain-text bodies (virtualized in LazyColumn). */
+private const val MAX_DISPLAY_BODY_LINES = 2_000
+
+private data class DisplayBody(
+    val text: String,
+    val originalLength: Int,
+    val truncated: Boolean,
+)
+
+private fun truncateForDisplay(body: String, maxChars: Int = MAX_DISPLAY_BODY_CHARS): DisplayBody {
+    if (body.length <= maxChars) {
+        return DisplayBody(text = body, originalLength = body.length, truncated = false)
+    }
+    val note = "\n…[truncated for display: showing ${formatBytesCompact(maxChars.toLong())} of ${formatBytesCompact(body.length.toLong())}]"
+    return DisplayBody(
+        text = body.take(maxChars) + note,
+        originalLength = body.length,
+        truncated = true,
+    )
+}
+
+/** Split any text body (CSV, XML, plain, …) into lines, capped to avoid Compose OOM. */
+private fun bodyLinesForDisplay(text: String, maxLines: Int = MAX_DISPLAY_BODY_LINES): List<String> {
+    val lines = ArrayList<String>(minOf(maxLines + 1, 256))
+    var count = 0
+    text.lineSequence().forEach { line ->
+        if (count >= maxLines) {
+            lines.add("…[truncated: more lines not shown]")
+            return lines
+        }
+        lines.add(line)
+        count++
+    }
+    return lines
+}
+
 @Composable
 private fun NetworkDebugTab(
     logs: List<NetworkLog>,
@@ -547,6 +605,9 @@ private fun LogItem(log: NetworkLog, onClick: () -> Unit) {
         in 500..599 -> Color(0xFFF87171)
         else -> Color.Gray
     }
+    val sizeLabel = remember(log.requestSizeBytes, log.responseSizeBytes) {
+        formatTransferSizes(log.requestSizeBytes, log.responseSizeBytes)
+    }
 
     Column(
         modifier = Modifier
@@ -577,6 +638,15 @@ private fun LogItem(log: NetworkLog, onClick: () -> Unit) {
                 color = Color.White.copy(alpha = 0.6f),
                 fontSize = 11.sp
             )
+            if (sizeLabel.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = sizeLabel,
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = time,
@@ -622,6 +692,22 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
                         DetailItem("Status", log.statusCode?.toString() ?: "N/A")
                         DetailItem("Duration", "${log.durationMs}ms")
                         DetailItem("Time", Date(log.timestamp).toString())
+                        if (log.requestSizeBytes > 0 || log.responseSizeBytes > 0) {
+                            DetailItem(
+                                "Size",
+                                buildString {
+                                    if (log.requestSizeBytes > 0) {
+                                        append("↑ ${formatBytes(log.requestSizeBytes)}")
+                                    }
+                                    if (log.requestSizeBytes > 0 && log.responseSizeBytes > 0) {
+                                        append("  ")
+                                    }
+                                    if (log.responseSizeBytes > 0) {
+                                        append("↓ ${formatBytes(log.responseSizeBytes)}")
+                                    }
+                                }
+                            )
+                        }
 
                         val queryParams = remember(log.url) { log.queryParams }
                         if (queryParams.isNotEmpty()) {
@@ -663,10 +749,23 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
                         }
 
                         val reqBody = remember(log.id, log.requestBody) { log.safeRequestBody }
-                        if (reqBody.isNotBlank()) {
+                        if (reqBody.isNotBlank() || log.requestSizeBytes > 0) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            DetailSection("Request body")
-                            BodyContent(reqBody, onFullscreen = { fullscreenBody = reqBody })
+                            val reqTitle = if (log.requestSizeBytes > 0) {
+                                "Request body (${formatBytes(log.requestSizeBytes)})"
+                            } else {
+                                "Request body"
+                            }
+                            DetailSection(reqTitle)
+                            if (reqBody.isNotBlank()) {
+                                BodyContent(reqBody, onFullscreen = { fullscreenBody = reqBody })
+                            } else {
+                                Text(
+                                    text = "No body captured (size ${formatBytes(log.requestSizeBytes)})",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                )
+                            }
                         }
 
                         log.responseHeaders?.let { headers ->
@@ -684,10 +783,23 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
                         }
 
                         val respBody = remember(log.id, log.responseBody) { log.safeResponseBody }
-                        if (respBody.isNotBlank()) {
+                        if (respBody.isNotBlank() || log.responseSizeBytes > 0) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            DetailSection("Response body")
-                            BodyContent(respBody, onFullscreen = { fullscreenBody = respBody })
+                            val respTitle = if (log.responseSizeBytes > 0) {
+                                "Response body (${formatBytes(log.responseSizeBytes)})"
+                            } else {
+                                "Response body"
+                            }
+                            DetailSection(respTitle)
+                            if (respBody.isNotBlank()) {
+                                BodyContent(respBody, onFullscreen = { fullscreenBody = respBody })
+                            } else {
+                                Text(
+                                    text = "No body captured (size ${formatBytes(log.responseSizeBytes)})",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                )
+                            }
                         }
                     }
                 }
@@ -745,8 +857,9 @@ private fun CollapsibleDetailSection(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
-    val jsonElement = remember(body) {
-        parseAndLimitJson(body)
+    val display = remember(body) { truncateForDisplay(body) }
+    val jsonElement = remember(display.text) {
+        parseAndLimitJson(display.text)
     }
 
     AlertDialog(
@@ -760,7 +873,16 @@ private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Body viewer", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Body viewer", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    if (display.truncated) {
+                        Text(
+                            text = "Truncated · ${formatBytes(display.originalLength.toLong())} total",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        )
+                    }
+                }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "Close")
                 }
@@ -781,15 +903,11 @@ private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
                             useLazyColumn = true
                         )
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                            item {
-                                Text(
-                                    text = body,
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                            }
-                        }
+                        PlainBodyText(
+                            text = display.text,
+                            modifier = Modifier.fillMaxSize().padding(8.dp),
+                            useLazyColumn = true,
+                        )
                     }
                 }
             }
@@ -828,47 +946,91 @@ private fun BodyContent(
     body: String,
     onFullscreen: (() -> Unit)? = null
 ) {
-    val jsonElement = remember(body) {
-        parseAndLimitJson(body)
+    val display = remember(body) { truncateForDisplay(body) }
+    val jsonElement = remember(display.text) {
+        parseAndLimitJson(display.text)
     }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Surface(
-            color = Color.Black.copy(alpha = 0.05f),
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (jsonElement != null) {
-                JsonTree(
-                    jsonElement = jsonElement,
-                    modifier = Modifier.padding(8.dp)
-                )
-            } else {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (display.truncated) {
+            Text(
+                text = "Showing ${formatBytesCompact(MAX_DISPLAY_BODY_CHARS.toLong())} of ${formatBytes(display.originalLength.toLong())} (truncated)",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (jsonElement != null) {
+                    JsonTree(
+                        jsonElement = jsonElement,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                } else {
+                    PlainBodyText(
+                        text = display.text,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 240.dp)
+                            .padding(8.dp),
+                        useLazyColumn = true,
+                    )
+                }
+            }
+
+            if (onFullscreen != null) {
+                IconButton(
+                    onClick = onFullscreen,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Fullscreen,
+                        contentDescription = "Fullscreen",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renders CSV / plain text / XML / etc. as virtualized monospace lines.
+ * Never assumes JSON — callers route structured JSON to [JsonTree] separately.
+ */
+@Composable
+private fun PlainBodyText(
+    text: String,
+    modifier: Modifier = Modifier,
+    useLazyColumn: Boolean = true,
+) {
+    val lines = remember(text) { bodyLinesForDisplay(text) }
+    if (useLazyColumn) {
+        LazyColumn(modifier = modifier) {
+            items(lines.size, key = { it }) { index ->
                 Text(
-                    text = body,
+                    text = lines[index],
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.padding(8.dp)
                 )
             }
         }
-
-        if (onFullscreen != null) {
-            IconButton(
-                onClick = onFullscreen,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(24.dp)
-            ) {
-                Icon(
-                    Icons.Default.Fullscreen,
-                    contentDescription = "Fullscreen",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
+    } else {
+        Text(
+            text = lines.joinToString("\n"),
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            modifier = modifier,
+        )
     }
 }
 
