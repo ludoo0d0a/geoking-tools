@@ -230,7 +230,10 @@ defaultConfig {
 }
 ```
 
-CI injecte `VERSION_CODE=${{ github.run_number }}` automatiquement via geoking-ci.
+CI injecte `VERSION_CODE=max(github.run_number, playstore/version.properties+1)` via
+geoking-ci (`resolve-version-code.sh`). Après un publish local, committer le
+`versionCode` bumpé dans `playstore/version.properties` pour que la prochaine CI
+reste au-dessus de ce plancher.
 
 ### Signing release (env vars, pas de keystore commité)
 
