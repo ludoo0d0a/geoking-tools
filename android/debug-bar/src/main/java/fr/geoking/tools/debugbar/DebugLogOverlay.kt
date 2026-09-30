@@ -181,7 +181,9 @@ private fun DebugLogOverlayContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Above,
+                            ),
                             tooltip = { PlainTooltip { Text("Disable cache") } },
                             state = rememberTooltipState()
                         ) {
@@ -194,7 +196,9 @@ private fun DebugLogOverlayContent(
                             }
                         }
                         TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Above,
+                            ),
                             tooltip = { PlainTooltip { Text("Clear cache") } },
                             state = rememberTooltipState()
                         ) {
@@ -203,7 +207,9 @@ private fun DebugLogOverlayContent(
                             }
                         }
                         TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Above,
+                            ),
                             tooltip = { PlainTooltip { Text("Clear logs") } },
                             state = rememberTooltipState()
                         ) {
@@ -212,7 +218,9 @@ private fun DebugLogOverlayContent(
                             }
                         }
                         TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Above,
+                            ),
                             tooltip = { PlainTooltip { Text("Close") } },
                             state = rememberTooltipState()
                         ) {
@@ -222,7 +230,7 @@ private fun DebugLogOverlayContent(
                         }
                     }
 
-                    TabRow(
+                    SecondaryTabRow(
                         selectedTabIndex = selectedTab.ordinal,
                         containerColor = Color.Transparent,
                         contentColor = Color.White,
