@@ -16,6 +16,7 @@ on:
         default: false
         type: boolean
 
+# Caller-side allowOneBuildAtOnce (also enforced inside geoking-ci reusable workflows).
 concurrency:
   group: play-release
   cancel-in-progress: true

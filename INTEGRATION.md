@@ -342,6 +342,12 @@ Chaque app ne contient que ~15 lignes YAML ; la logique build/release vit dans g
 | Tag `v*` | `release-play.yml` | `versionName` = nom du tag |
 | `workflow_dispatch` | `release-play.yml` | Choix de piste Play |
 
+**allowOneBuildAtOnce / cancelPreviousRunningBuild** — défini dans
+[geoking-ci](https://github.com/ludoo0d0a/geoking-ci) (`concurrency` +
+`cancel-in-progress: true` sur chaque workflow réutilisable). Les templates
+app gardent aussi un `concurrency` côté caller pour annuler tout le workflow
+appelant (jobs locaux inclus).
+
 ---
 
 ## 7. Première release — ordre recommandé

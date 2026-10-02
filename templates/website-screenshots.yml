@@ -1,5 +1,6 @@
 name: Website screenshots
 
+# Caller-side allowOneBuildAtOnce (also enforced inside geoking-ci reusable workflows).
 concurrency:
   group: website-screenshots-${{ github.repository }}
   cancel-in-progress: true

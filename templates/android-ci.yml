@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [ main ]
 
+# Caller-side allowOneBuildAtOnce (also enforced inside geoking-ci reusable workflows).
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
