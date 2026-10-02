@@ -1,5 +1,7 @@
 package fr.geoking.tools.debugbar
 
+import fr.geoking.tools.debugbar.model.CacheStats
+import fr.geoking.tools.debugbar.model.CacheStatRow
 import fr.geoking.tools.debugbar.model.HostDataConsumption
 import fr.geoking.tools.debugbar.model.NetworkLog
 import fr.geoking.tools.debugbar.model.ProviderTraceEntry
@@ -48,6 +50,8 @@ fun DebugLogOverlay(
     onResetDataConsumption: () -> Unit,
     modifier: Modifier = Modifier,
     detectedCountries: String? = null,
+    cacheStats: CacheStats = CacheStats(),
+    onRefreshCacheStats: (() -> Unit)? = null,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -66,6 +70,8 @@ fun DebugLogOverlay(
             onClearLogs = onClearLogs,
             onResetDataConsumption = onResetDataConsumption,
             detectedCountries = detectedCountries,
+            cacheStats = cacheStats,
+            onRefreshCacheStats = onRefreshCacheStats,
             modifier = Modifier.padding(16.dp)
         )
 
@@ -99,6 +105,8 @@ fun DebugLogOverlay(
                         onClearLogs = onClearLogs,
                         onResetDataConsumption = onResetDataConsumption,
                         detectedCountries = detectedCountries,
+                        cacheStats = cacheStats,
+                        onRefreshCacheStats = onRefreshCacheStats,
                         modifier = Modifier
                             .padding(16.dp)
                             .clickable(
@@ -116,6 +124,7 @@ fun DebugLogOverlay(
 private enum class DebugOverlayTab {
     Network,
     Providers,
+    Cache,
     DataConsumption,
 }
 
@@ -135,6 +144,8 @@ private fun DebugLogOverlayContent(
     onClearLogs: () -> Unit,
     onResetDataConsumption: () -> Unit,
     detectedCountries: String?,
+    cacheStats: CacheStats,
+    onRefreshCacheStats: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableStateOf(DebugOverlayTab.Network) }
@@ -145,6 +156,12 @@ private fun DebugLogOverlayContent(
         logs.map { it.host }.filter { it.isNotEmpty() }.distinct().sorted()
     }
     val hostConsumptionMap = hostConsumption
+
+    LaunchedEffect(selectedTab, isExpanded) {
+        if (isExpanded && selectedTab == DebugOverlayTab.Cache) {
+            onRefreshCacheStats?.invoke()
+        }
+    }
 
     Box(modifier = modifier.zIndex(2f)) {
         if (!isExpanded) {
@@ -184,32 +201,6 @@ private fun DebugLogOverlayContent(
                             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                                 TooltipAnchorPosition.Above,
                             ),
-                            tooltip = { PlainTooltip { Text("Disable cache") } },
-                            state = rememberTooltipState()
-                        ) {
-                            IconButton(onClick = { onDisableCacheChange(!disableCache) }) {
-                                Icon(
-                                    imageVector = if (disableCache) Icons.Default.CloudOff else Icons.Default.Cloud,
-                                    contentDescription = "Disable cache",
-                                    tint = if (disableCache) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                        TooltipBox(
-                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                TooltipAnchorPosition.Above,
-                            ),
-                            tooltip = { PlainTooltip { Text("Clear cache") } },
-                            state = rememberTooltipState()
-                        ) {
-                            IconButton(onClick = onClearCaches) {
-                                Icon(Icons.Default.Refresh, "Clear cache", tint = MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-                        TooltipBox(
-                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                TooltipAnchorPosition.Above,
-                            ),
                             tooltip = { PlainTooltip { Text("Clear logs") } },
                             state = rememberTooltipState()
                         ) {
@@ -230,11 +221,12 @@ private fun DebugLogOverlayContent(
                         }
                     }
 
-                    SecondaryTabRow(
+                    ScrollableTabRow(
                         selectedTabIndex = selectedTab.ordinal,
                         containerColor = Color.Transparent,
                         contentColor = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp),
+                        edgePadding = 8.dp,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Tab(
                             selected = selectedTab == DebugOverlayTab.Network,
@@ -245,6 +237,11 @@ private fun DebugLogOverlayContent(
                             selected = selectedTab == DebugOverlayTab.Providers,
                             onClick = { selectedTab = DebugOverlayTab.Providers },
                             text = { Text("Providers", fontSize = 12.sp) },
+                        )
+                        Tab(
+                            selected = selectedTab == DebugOverlayTab.Cache,
+                            onClick = { selectedTab = DebugOverlayTab.Cache },
+                            text = { Text("Cache", fontSize = 12.sp) },
                         )
                         Tab(
                             selected = selectedTab == DebugOverlayTab.DataConsumption,
@@ -266,6 +263,16 @@ private fun DebugLogOverlayContent(
                             DebugOverlayTab.Providers -> ProviderTraceTab(
                                 traces = providerTraces,
                                 onTraceClick = { selectedTrace = it },
+                            )
+                            DebugOverlayTab.Cache -> CacheTab(
+                                disableCache = disableCache,
+                                onDisableCacheChange = onDisableCacheChange,
+                                onClearCaches = {
+                                    onClearCaches()
+                                    onRefreshCacheStats?.invoke()
+                                },
+                                cacheStats = cacheStats,
+                                onRefreshCacheStats = onRefreshCacheStats,
                             )
                             DebugOverlayTab.DataConsumption -> DataConsumptionTab(
                                 hostConsumptions = remember(hostConsumptionMap) {
@@ -317,10 +324,40 @@ private fun formatTransferSizes(requestBytes: Long, responseBytes: Long): String
     return parts.joinToString(" ")
 }
 
-/** Cap body text before Compose/JSON parsing to avoid OOM on huge payloads (any format). */
+/** Cap body text before Compose rendering to avoid OOM on huge payloads (non-JSON only). */
 private const val MAX_DISPLAY_BODY_CHARS = 64 * 1024
 /** Cap line count for CSV / plain-text bodies (virtualized in LazyColumn). */
 private const val MAX_DISPLAY_BODY_LINES = 2_000
+
+private data class PreparedBody(
+    val json: JsonElement?,
+    val plainText: String,
+    val originalLength: Int,
+    val plainTruncated: Boolean,
+)
+
+/**
+ * Prefer a JSON tree (object/array) with array limiting.
+ * Only char-truncate when the body is not structured JSON (CSV, XML, plain, …).
+ */
+private fun prepareBodyForDisplay(body: String): PreparedBody {
+    val json = parseAndLimitJson(body)
+    if (json != null) {
+        return PreparedBody(
+            json = json,
+            plainText = body,
+            originalLength = body.length,
+            plainTruncated = false,
+        )
+    }
+    val display = truncateForDisplay(body)
+    return PreparedBody(
+        json = null,
+        plainText = display.text,
+        originalLength = display.originalLength,
+        plainTruncated = display.truncated,
+    )
+}
 
 private data class DisplayBody(
     val text: String,
@@ -865,10 +902,7 @@ private fun CollapsibleDetailSection(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
-    val display = remember(body) { truncateForDisplay(body) }
-    val jsonElement = remember(display.text) {
-        parseAndLimitJson(display.text)
-    }
+    val prepared = remember(body) { prepareBodyForDisplay(body) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -883,9 +917,9 @@ private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Body viewer", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    if (display.truncated) {
+                    if (prepared.plainTruncated) {
                         Text(
-                            text = "Truncated · ${formatBytes(display.originalLength.toLong())} total",
+                            text = "Truncated · ${formatBytes(prepared.originalLength.toLong())} total",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         )
@@ -903,16 +937,17 @@ private fun FullscreenBodyDialog(body: String, onDismiss: () -> Unit) {
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (jsonElement != null) {
+                    val json = prepared.json
+                    if (json != null) {
                         JsonTree(
-                            jsonElement = jsonElement,
+                            jsonElement = json,
                             modifier = Modifier.fillMaxSize().padding(8.dp),
                             initialExpanded = true,
                             useLazyColumn = true
                         )
                     } else {
                         PlainBodyText(
-                            text = display.text,
+                            text = prepared.plainText,
                             modifier = Modifier.fillMaxSize().padding(8.dp),
                             useLazyColumn = true,
                         )
@@ -954,15 +989,12 @@ private fun BodyContent(
     body: String,
     onFullscreen: (() -> Unit)? = null
 ) {
-    val display = remember(body) { truncateForDisplay(body) }
-    val jsonElement = remember(display.text) {
-        parseAndLimitJson(display.text)
-    }
+    val prepared = remember(body) { prepareBodyForDisplay(body) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (display.truncated) {
+        if (prepared.plainTruncated) {
             Text(
-                text = "Showing ${formatBytesCompact(MAX_DISPLAY_BODY_CHARS.toLong())} of ${formatBytes(display.originalLength.toLong())} (truncated)",
+                text = "Showing ${formatBytesCompact(MAX_DISPLAY_BODY_CHARS.toLong())} of ${formatBytes(prepared.originalLength.toLong())} (truncated)",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                 modifier = Modifier.padding(bottom = 4.dp),
@@ -974,14 +1006,15 @@ private fun BodyContent(
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (jsonElement != null) {
+                val json = prepared.json
+                if (json != null) {
                     JsonTree(
-                        jsonElement = jsonElement,
+                        jsonElement = json,
                         modifier = Modifier.padding(8.dp)
                     )
                 } else {
                     PlainBodyText(
-                        text = display.text,
+                        text = prepared.plainText,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 240.dp)
@@ -1038,6 +1071,212 @@ private fun PlainBodyText(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun CacheTab(
+    disableCache: Boolean,
+    onDisableCacheChange: (Boolean) -> Unit,
+    onClearCaches: () -> Unit,
+    cacheStats: CacheStats,
+    onRefreshCacheStats: (() -> Unit)?,
+) {
+    // disableCache=true means caching is bypassed / forced network.
+    val cachingEnabled = !disableCache
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        "Controls",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                if (cachingEnabled) "Caching: ON" else "Caching: OFF",
+                                color = if (cachingEnabled) Color(0xFF4ADE80) else Color(0xFFF87171),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                if (cachingEnabled) {
+                                    "Responses may be served from cache"
+                                } else {
+                                    "Cache bypassed — network only"
+                                },
+                                color = Color.White.copy(alpha = 0.55f),
+                                fontSize = 11.sp,
+                            )
+                        }
+                        Switch(
+                            checked = cachingEnabled,
+                            onCheckedChange = { enabled -> onDisableCacheChange(!enabled) },
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = onClearCaches,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteSweep,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Clear all caches", fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Overview",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (onRefreshCacheStats != null) {
+                            TextButton(onClick = onRefreshCacheStats, contentPadding = PaddingValues(4.dp)) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = "Refresh stats",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text("Total size", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+                            Text(
+                                formatBytes(cacheStats.totalSizeBytes),
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Items", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+                            Text(
+                                cacheStats.totalItemCount.toString(),
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (cacheStats.byType.isNotEmpty()) {
+            item {
+                Text(
+                    "By type",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            items(cacheStats.byType, key = { "type:${it.label}" }) { row ->
+                CacheStatRowItem(row)
+            }
+        }
+
+        if (cacheStats.byHost.isNotEmpty()) {
+            item {
+                Text(
+                    "By host",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            items(cacheStats.byHost, key = { "host:${it.label}" }) { row ->
+                CacheStatRowItem(row)
+            }
+        }
+
+        if (cacheStats.byType.isEmpty() && cacheStats.byHost.isEmpty() &&
+            cacheStats.totalSizeBytes == 0L && cacheStats.totalItemCount == 0
+        ) {
+            item {
+                Text(
+                    "No cache stats available yet.",
+                    color = Color.White.copy(alpha = 0.45f),
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CacheStatRowItem(row: CacheStatRow) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            row.label,
+            color = Color.White.copy(alpha = 0.9f),
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            "${row.itemCount} · ${formatBytes(row.sizeBytes)}",
+            color = Color.White.copy(alpha = 0.55f),
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
         )
     }
 }

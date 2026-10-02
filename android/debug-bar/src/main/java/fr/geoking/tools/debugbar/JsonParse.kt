@@ -25,12 +25,13 @@ internal fun limitJsonArrays(element: JsonElement, maxItems: Int = 20): JsonElem
 }
 
 /**
- * Parses [body] as a JSON **object or array** only.
+ * Parses [body] as a JSON **object or array** only, then caps array lengths.
  * CSV, plain text, numbers, or quoted strings return null so they render as raw text.
+ * Do not char-truncate [body] before calling — that breaks JSON and skips the tree.
  */
 internal fun parseAndLimitJson(body: String, maxItems: Int = 20): JsonElement? {
     if (body.isBlank()) return null
-    // Avoid parsing multi-megabyte blobs; caller should truncate first.
+    // Hard cap parse input to avoid OOM; array limiting shrinks the tree after parse.
     if (body.length > 256 * 1024) return null
     val trimmed = body.trimStart()
     val first = trimmed.firstOrNull() ?: return null
