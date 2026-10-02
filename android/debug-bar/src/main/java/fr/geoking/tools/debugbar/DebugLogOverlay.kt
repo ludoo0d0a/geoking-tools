@@ -133,6 +133,24 @@ private enum class DebugOverlayTab {
     Info,
 }
 
+@Composable
+private fun CompactDebugTab(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: String,
+) {
+    Tab(
+        selected = selected,
+        onClick = onClick,
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DebugLogOverlayContent(
@@ -227,37 +245,38 @@ private fun DebugLogOverlayContent(
                         }
                     }
 
-                    ScrollableTabRow(
+                    SecondaryScrollableTabRow(
                         selectedTabIndex = selectedTab.ordinal,
                         containerColor = Color.Transparent,
                         contentColor = Color.White,
-                        edgePadding = 8.dp,
+                        edgePadding = 0.dp,
+                        minTabWidth = 48.dp,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Tab(
+                        CompactDebugTab(
                             selected = selectedTab == DebugOverlayTab.Network,
                             onClick = { selectedTab = DebugOverlayTab.Network },
-                            text = { Text("Network", fontSize = 12.sp) },
+                            label = "Network",
                         )
-                        Tab(
+                        CompactDebugTab(
                             selected = selectedTab == DebugOverlayTab.Providers,
                             onClick = { selectedTab = DebugOverlayTab.Providers },
-                            text = { Text("Providers", fontSize = 12.sp) },
+                            label = "Providers",
                         )
-                        Tab(
+                        CompactDebugTab(
                             selected = selectedTab == DebugOverlayTab.Cache,
                             onClick = { selectedTab = DebugOverlayTab.Cache },
-                            text = { Text("Cache", fontSize = 12.sp) },
+                            label = "Cache",
                         )
-                        Tab(
+                        CompactDebugTab(
                             selected = selectedTab == DebugOverlayTab.DataConsumption,
                             onClick = { selectedTab = DebugOverlayTab.DataConsumption },
-                            text = { Text("Data Usage", fontSize = 12.sp) },
+                            label = "Data Usage",
                         )
-                        Tab(
+                        CompactDebugTab(
                             selected = selectedTab == DebugOverlayTab.Info,
                             onClick = { selectedTab = DebugOverlayTab.Info },
-                            text = { Text("Info", fontSize = 12.sp) },
+                            label = "Info",
                         )
                     }
 
