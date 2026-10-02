@@ -52,6 +52,8 @@ fun DebugLogOverlay(
     detectedCountries: String? = null,
     cacheStats: CacheStats = CacheStats(),
     onRefreshCacheStats: (() -> Unit)? = null,
+    /** App-specific debug lines shown in the Info tab. */
+    customInfo: List<String> = emptyList(),
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -72,6 +74,7 @@ fun DebugLogOverlay(
             detectedCountries = detectedCountries,
             cacheStats = cacheStats,
             onRefreshCacheStats = onRefreshCacheStats,
+            customInfo = customInfo,
             modifier = Modifier.padding(16.dp)
         )
 
@@ -107,6 +110,7 @@ fun DebugLogOverlay(
                         detectedCountries = detectedCountries,
                         cacheStats = cacheStats,
                         onRefreshCacheStats = onRefreshCacheStats,
+                        customInfo = customInfo,
                         modifier = Modifier
                             .padding(16.dp)
                             .clickable(
@@ -126,6 +130,7 @@ private enum class DebugOverlayTab {
     Providers,
     Cache,
     DataConsumption,
+    Info,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -146,6 +151,7 @@ private fun DebugLogOverlayContent(
     detectedCountries: String?,
     cacheStats: CacheStats,
     onRefreshCacheStats: (() -> Unit)?,
+    customInfo: List<String>,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableStateOf(DebugOverlayTab.Network) }
@@ -248,6 +254,11 @@ private fun DebugLogOverlayContent(
                             onClick = { selectedTab = DebugOverlayTab.DataConsumption },
                             text = { Text("Data Usage", fontSize = 12.sp) },
                         )
+                        Tab(
+                            selected = selectedTab == DebugOverlayTab.Info,
+                            onClick = { selectedTab = DebugOverlayTab.Info },
+                            text = { Text("Info", fontSize = 12.sp) },
+                        )
                     }
 
                     Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -282,6 +293,7 @@ private fun DebugLogOverlayContent(
                                 totalReceived = totalBytesReceived,
                                 onResetClick = onResetDataConsumption
                             )
+                            DebugOverlayTab.Info -> CustomInfoTab(lines = customInfo)
                         }
                     }
                 }
@@ -1278,6 +1290,43 @@ private fun CacheStatRowItem(row: CacheStatRow) {
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
         )
+    }
+}
+
+@Composable
+private fun CustomInfoTab(lines: List<String>) {
+    if (lines.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "No custom info",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 13.sp,
+            )
+        }
+        return
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        items(lines.size) { index ->
+            SelectionContainer {
+                Text(
+                    lines[index],
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1E293B), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                )
+            }
+        }
     }
 }
 
