@@ -139,10 +139,18 @@ gk_play_edit_delete() {
 gk_play_latest_version_code() {
   local token="$1"
   need jq
-  local edit tracks track json codes
+  local edit track json codes
   edit="$(gk_play_edit_insert "$token")"
   [ -n "$edit" ] || return 1
   codes=""
+  # Bundles already uploaded (even if not on a track) still consume versionCodes.
+  json="$(gk_play_api GET "${APP_ID}/edits/${edit}/bundles" "$token" 2>/dev/null || true)"
+  if [ -n "$json" ]; then
+    while IFS= read -r vc; do
+      [ -n "$vc" ] || continue
+      codes="${codes}${vc}"$'\n'
+    done < <(printf '%s' "$json" | jq -r '.bundles[]?.versionCode // empty' 2>/dev/null)
+  fi
   for track in internal alpha beta production; do
     json="$(gk_play_api GET "${APP_ID}/edits/${edit}/tracks/${track}" "$token" 2>/dev/null || true)"
     [ -n "$json" ] || continue
@@ -153,7 +161,7 @@ gk_play_latest_version_code() {
   done
   gk_play_edit_delete "$token" "$edit"
   [ -n "$codes" ] || return 1
-  printf '%s' "$codes" | awk 'NF { if ($1 > max) max = $1 } END { if (max) print max }'
+  printf '%s' "$codes" | awk 'NF { if ($1+0 > max+0) max = $1 } END { if (max != "") print max }'
 }
 
 # Next versionCode for a local release: max(Play tracks, playstore/version.properties) + 1.
