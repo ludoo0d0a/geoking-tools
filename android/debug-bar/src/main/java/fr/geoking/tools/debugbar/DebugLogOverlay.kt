@@ -1039,9 +1039,11 @@ private fun BodyContent(
             ) {
                 val json = prepared.json
                 if (json != null) {
+                    // Expand/collapse tree (not raw text) for JSON request/response bodies.
                     JsonTree(
                         jsonElement = json,
-                        modifier = Modifier.padding(8.dp)
+                        modifier = Modifier.padding(8.dp),
+                        initialExpanded = true,
                     )
                 } else {
                     PlainBodyText(
