@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "geoking-tools-android"
 include(":debug-bar")
+include(":in-app-update")

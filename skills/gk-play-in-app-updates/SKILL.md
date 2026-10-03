@@ -1,119 +1,126 @@
 ---
 name: gk-play-in-app-updates
 description: >-
-  Wire Play In-App Updates for a GeoKing Android phone app (flexible download,
-  Compose dialog, auto-complete, Settings manual check). Use when adding
-  auto-update, in-app update, AppUpdateManager, play-app-update,
-  gk-play-in-app-updates, Settings check for updates, or when Release Spine
-  lists Play In-App Updates. Canonical phone pattern: Gaston + Arthur Settings
-  check; Scora for multi-surface / IMMEDIATE preference.
+  Wire Play In-App Updates for a GeoKing Android phone app via shared
+  fr.geoking.tools:in-app-update (flexible download, update-available
+  notification tap → start update, Compose dialog, auto-complete, Settings
+  manual check). Use when adding auto-update, in-app update, AppUpdateManager,
+  play-app-update, gk-play-in-app-updates, Settings check for updates, or when
+  Release Spine lists Play In-App Updates. Canonical consumers: Gaston + Arthur;
+  Scora for multi-surface / IMMEDIATE preference.
 ---
 
 # Play In-App Updates (phone)
 
 Success = Play-installed builds check once at phone `MainActivity` startup, show
-a dismissible dialog, download **flexibly** in the background, then
-**auto-`completeUpdate()`** (restart) when downloaded. Settings also offers
-**Check for updates** with up-to-date / error feedback.
+a dismissible dialog **and** an update-available notification, download
+**flexibly** in the background, then **auto-`completeUpdate()`** (restart) when
+downloaded. **Tapping the notification opens the app and starts the flexible
+update** (no second confirm). Settings also offers **Check for updates** with
+up-to-date / error feedback.
 
-| Reference | Role |
+| Piece | Location |
 |---|---|
-| **Gaston** (`~/dev/android/_auto/gaston`) | Canonical **phone** helper + startup wiring |
-| **Arthur** (`~/dev/android/arthur`) | Phone helper + **Settings manual check** + feedback dialogs |
-| **Scora** (`~/dev/android/scora`) | Phone + Wear manager, IMMEDIATE-first, upload `inAppUpdatePriority` |
+| **Shared library** | `geoking-tools/android/in-app-update` → `fr.geoking.tools:in-app-update` |
+| **Gaston** | Canonical consumer (phone notif + AA HUN extra + startup) |
+| **Arthur** | Consumer + **Settings manual check** + feedback dialogs |
+| **Scora** | Phone + Wear manager, IMMEDIATE-first (do not copy into phone-only apps) |
 | Play docs | https://developer.android.com/guide/playcore/in-app-updates |
 
-Resolve tools: sibling `../geoking-tools` or `$GK_TOOLS`. This skill lives in
-`geoking-tools/skills/gk-play-in-app-updates/`.
+Resolve tools: `$GK_TOOLS` → `geoking-tools/` → `../geoking-tools` → `../../geoking-tools`.
+This skill lives in `geoking-tools/skills/gk-play-in-app-updates/`.
 
 ```
 ~/dev/android/
 ├── geoking-tools/
-├── _auto/gaston/          # phone helper + startup
-├── arthur/                # Settings manual check reference
-├── scora/                 # multi-surface / IMMEDIATE extras
+│   └── android/in-app-update/   # shared helper + notification
+├── _auto/gaston/                # includeBuild consumer
+├── arthur/                      # includeBuild + Settings manual check
 └── <app>/
-    └── androidApp/ (or app/) …/update/InAppUpdateHelper.kt
 ```
 
 ## Progress checklist
 
 ```
-- [ ] 1. Catalog deps play-app-update + ktx 2.1.0 on the phone module
-- [ ] 2. InAppUpdateHelper (StateFlow + flexible + auto-complete + manual feedback)
-- [ ] 3. MainActivity: launcher, check once (Play-gated), unregister onDestroy
-- [ ] 4. Compose UpdateAvailableDialog + in-progress indicator
-- [ ] 5. Settings “Check for updates” + up-to-date / error feedback dialogs
-- [ ] 6. EN (+ FR) strings
-- [ ] 7. Optional: IMMEDIATE / inAppUpdatePriority / Wear (Scora)
+- [ ] 1. includeBuild geoking-tools/android + implementation("fr.geoking.tools:in-app-update")
+- [ ] 2. MainActivity: UpdateNotificationSpec, launcher, consumeLaunchIntent, check once, auto-start
+- [ ] 3. Compose UpdateAvailableDialog (skip when autoStartUpdate) + in-progress indicator
+- [ ] 4. Settings “Check for updates” + up-to-date / error feedback dialogs
+- [ ] 5. EN (+ FR) strings + POST_NOTIFICATIONS permission
+- [ ] 6. Optional: AA HUN via onUpdateAvailableExtra (Gaston); IMMEDIATE / Wear (Scora)
 ```
 
 ## Default decisions (phone)
 
 | Choice | Default | Notes |
 |---|---|---|
-| Update type | **FLEXIBLE** only | Gaston; user keeps using the app |
+| Implementation | **`fr.geoking.tools:in-app-update`** | Do not copy helper into the app |
+| Update type | **FLEXIBLE** only | User keeps using the app |
 | When to check | Once in `MainActivity.onCreate` | Not every `onResume` |
-| Manual check | Settings row → `checkForUpdate(manual = true)` | Re-prompt; feedback if up to date / error |
-| Gate | Play Store builds only | `BuildConfig.IS_PLAYSTORE_DISTRIBUTION` if the app has it; else always check (no-op off Play) |
+| Notification | On availability | Tap → `EXTRA_START_UPDATE` → `maybeAutoStartUpdate` |
+| Manual check | Settings → `checkForUpdate(manual = true)` | Re-prompt; feedback if up to date / error |
+| Gate | Play Store builds only | `BuildConfig.IS_PLAYSTORE_DISTRIBUTION` if present |
 | After download | Auto `completeUpdate()` | No “Restart” snackbar |
-| Dismiss | Session flag | Cancel / Update both stop auto re-prompt this process; manual clears it |
-| Activity Result | `StartIntentSenderForResult` | Do not use deprecated Activity+requestCode API for new phone apps |
-| Surfaces | Phone Activity only | Skip Auto (no Activity UI) / ambient TV unless product asks |
+| Dismiss | Session flag | Cancel / Update stop auto re-prompt this process |
+| Activity Result | `StartIntentSenderForResult` | Required for phone apps |
 
 Do **not** copy Scora’s Wear match-gating or IMMEDIATE preference unless the app is multi-APK / needs forced update.
 
 ---
 
-## 1. Dependencies
+## 1. Import the library (includeBuild)
 
-`gradle/libs.versions.toml`:
+In the app’s `settings.gradle.kts`:
 
-```toml
-play-app-update = "2.1.0"
-# …
-play-app-update = { module = "com.google.android.play:app-update", version.ref = "play-app-update" }
-play-app-update-ktx = { module = "com.google.android.play:app-update-ktx", version.ref = "play-app-update" }
+```kotlin
+val gkToolsRoot = System.getenv("GK_TOOLS")
+    ?: listOf("geoking-tools", "../geoking-tools", "../../geoking-tools")
+        .map { rootDir.resolve(it) }
+        .firstOrNull { it.resolve("android").isDirectory }
+        ?.absolutePath
+        ?: error("geoking-tools not found; clone sibling or set GK_TOOLS")
+
+includeBuild("$gkToolsRoot/android") {
+    dependencySubstitution {
+        substitute(module("fr.geoking.tools:in-app-update"))
+            .using(project(":in-app-update"))
+    }
+}
 ```
 
 Phone module `build.gradle.kts`:
 
 ```kotlin
-implementation(libs.play.app.update)
-implementation(libs.play.app.update.ktx)
+implementation("fr.geoking.tools:in-app-update")
+// Play app-update deps come transitively (api); keep explicit catalog deps if preferred.
+```
+
+Optional thin aliases (Gaston/Arthur):
+
+```kotlin
+package fr.geoking.<app>.update
+typealias CheckFeedback = fr.geoking.tools.inappupdate.CheckFeedback
+typealias InAppUpdateHelper = fr.geoking.tools.inappupdate.InAppUpdateHelper
 ```
 
 ---
 
-## 2. Helper (Gaston shape + Arthur manual)
+## 2. Shared API
 
-Package: `fr.geoking.<app>.update.InAppUpdateHelper`.
-
-Responsibilities:
-
-- `updateAvailable: StateFlow<AppUpdateInfo?>` — drives the dialog
-- `installStatus: StateFlow<Int>` — drives in-progress UI (`PENDING` / `DOWNLOADING` / `INSTALLING`)
-- `checkFeedback: StateFlow<CheckFeedback>` — Settings-only up-to-date / error
-- Register `InstallStateUpdatedListener` in `init`; `unregister()` from `onDestroy`
-- `checkForUpdate(manual = false)`: startup path skips if dismissed or dialog already showing; if `DOWNLOADED` → `completeUpdate()`; if `UPDATE_AVAILABLE` + flexible allowed → emit info
-- `checkForUpdate(manual = true)`: clear session dismiss + feedback; same availability path; if no update → `CheckFeedback.UpToDate`; on Task failure → `CheckFeedback.Error`
-- `startUpdate(info, launcher)`: flexible `AppUpdateOptions` + `startUpdateFlowForResult`; clear dialog; set dismissed
-- `dismissUpdate()`: session dismiss without starting
-- `resetCheckFeedback()`: clear Settings feedback dialog
-
-Core API (keep this surface; adapt logging to the app):
+Package: `fr.geoking.tools.inappupdate`.
 
 ```kotlin
-sealed class CheckFeedback {
-    data object None : CheckFeedback()
-    data object UpToDate : CheckFeedback()
-    data class Error(val message: String) : CheckFeedback()
-}
-
-class InAppUpdateHelper(context: Context) {
+class InAppUpdateHelper(
+    context: Context,
+    notificationSpec: UpdateNotificationSpec? = null,
+    onUpdateAvailableExtra: (() -> Unit)? = null, // e.g. AA HUN
+) {
     val updateAvailable: StateFlow<AppUpdateInfo?>
     val installStatus: StateFlow<Int>
     val checkFeedback: StateFlow<CheckFeedback>
+    val autoStartUpdate: StateFlow<Boolean>
+    fun consumeLaunchIntent(intent: Intent?)
+    fun maybeAutoStartUpdate(launcher: ActivityResultLauncher<IntentSenderRequest>): Boolean
     fun checkForUpdate(manual: Boolean = false)
     fun startUpdate(info: AppUpdateInfo, launcher: ActivityResultLauncher<IntentSenderRequest>)
     fun completeUpdate()
@@ -121,37 +128,69 @@ class InAppUpdateHelper(context: Context) {
     fun resetCheckFeedback()
     fun unregister()
 }
+
+data class UpdateNotificationSpec(
+    channelId: String,
+    channelName: String,
+    @DrawableRes smallIcon: Int,
+    title: String,
+    message: String,
+    launchActivityClass: Class<out Activity>,
+    notificationId: Int = …,
+)
 ```
 
-Copy startup helper from Gaston, then add manual + `checkFeedback` from Arthur:
-
-- `_auto/gaston/androidApp/src/main/kotlin/fr/geoking/gaston/update/InAppUpdateHelper.kt`
-- `arthur/androidApp/src/main/kotlin/fr/geoking/arthur/update/InAppUpdateHelper.kt`
+Notification content intent launches `launchActivityClass` with
+`InAppUpdateIntents.EXTRA_START_UPDATE=true`. Host calls `consumeLaunchIntent` then
+`maybeAutoStartUpdate` when `updateAvailable` is ready.
 
 ---
 
 ## 3. MainActivity wiring
 
 ```kotlin
-private val inAppUpdateHelper by lazy { InAppUpdateHelper(applicationContext) }
+private val inAppUpdateHelper by lazy {
+    InAppUpdateHelper(
+        context = applicationContext,
+        notificationSpec = UpdateNotificationSpec(
+            channelId = "<app>_updates",
+            channelName = getString(R.string.update_available_title),
+            smallIcon = R.drawable.…,
+            title = getString(R.string.update_available_title),
+            message = getString(R.string.update_available_message),
+            launchActivityClass = MainActivity::class.java,
+        ),
+        // Gaston only: onUpdateAvailableExtra = { notificationHelper.showUpdateAvailableCarNotification() },
+    )
+}
 
 private val updateResultLauncher = registerForActivityResult(
     ActivityResultContracts.StartIntentSenderForResult()
-) { /* cancel / failure: no-op; user can get a later release */ }
+) { /* cancel / failure: no-op */ }
 
 override fun onCreate(...) {
-    // …
-    if (BuildConfig.IS_PLAYSTORE_DISTRIBUTION) { // omit gate if flag does not exist
+    inAppUpdateHelper.consumeLaunchIntent(intent)
+    if (BuildConfig.IS_PLAYSTORE_DISTRIBUTION) { // omit gate if flag missing
         inAppUpdateHelper.checkForUpdate()
     }
     setContent {
-        // collect updateAvailable → UpdateAvailableDialog
-        // onUpdate → inAppUpdateHelper.startUpdate(info, updateResultLauncher)
-        // onCancel → inAppUpdateHelper.dismissUpdate()
-        // installStatus in progress → top bar / banner text
-        // Settings onCheckForUpdate → checkForUpdate(manual = true)
-        // collect checkFeedback → UpdateCheckFeedbackDialog + resetCheckFeedback()
+        val updateAvailable by inAppUpdateHelper.updateAvailable.collectAsState()
+        val autoStartUpdate by inAppUpdateHelper.autoStartUpdate.collectAsState()
+        LaunchedEffect(updateAvailable, autoStartUpdate) {
+            if (autoStartUpdate && updateAvailable != null) {
+                inAppUpdateHelper.maybeAutoStartUpdate(updateResultLauncher)
+            }
+        }
+        // dialog only when updateAvailable != null && !autoStartUpdate
+        // onUpdate → startUpdate; onCancel → dismissUpdate
+        // Settings → checkForUpdate(manual = true) + checkFeedback dialogs
     }
+}
+
+override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    inAppUpdateHelper.consumeLaunchIntent(intent)
 }
 
 override fun onDestroy() {
@@ -160,68 +199,61 @@ override fun onDestroy() {
 }
 ```
 
-Optional hardening (Vincent): in `onResume`, if `installStatus == DOWNLOADED`, call `completeUpdate()` so a backgrounded download still finishes.
+Optional hardening: in `onResume`, if `installStatus == DOWNLOADED`, call `completeUpdate()`.
+
+Declare `POST_NOTIFICATIONS` in the manifest. On API 33+, the notifier no-ops if
+permission is denied (request at a suitable UX moment if desired).
 
 ---
 
-## 4. UI
+## 4. UI + strings
 
-1. **Dialog** — Material 3; Cancel + Update. Match app chrome (Gaston uses custom `Dialog` + `Surface`; Arthur/Scora use `AlertDialog`). Title/body from strings.
-2. **In progress** — non-blocking (top bar spinner + `update_in_progress`, or a slim banner). Do not block the Control Plane / main nav.
-3. Wire dialog only when `updateAvailable != null`.
-4. **Settings row** — Main menu `SettingsItem` / `ListItem`: `settings_check_update` → `checkForUpdate(manual = true)`.
-5. **Manual feedback** — when `checkFeedback` is `UpToDate` or `Error`, show a one-button OK dialog; call `resetCheckFeedback()` on dismiss. Do **not** show feedback on startup checks.
-
----
-
-## 5. Strings (minimum)
+1. **Dialog** — Material 3; Cancel + Update. Skip when `autoStartUpdate`.
+2. **In progress** — non-blocking banner / top-bar text (`update_in_progress`).
+3. **Settings row** — `settings_check_update` → `checkForUpdate(manual = true)`.
+4. **Manual feedback** — `UpToDate` / `Error` → one-button OK; `resetCheckFeedback()`.
 
 | Key | EN | FR |
 |---|---|---|
 | `update_available_title` | Update available | Mise à jour disponible |
-| `update_available_message` | A new version of \<App\> is available. Update now to get the latest features and improvements. | Une nouvelle version de \<App\> est disponible. Mettez à jour pour profiter des dernières fonctionnalités. |
+| `update_available_message` | A new version of \<App\> is available… | Une nouvelle version de \<App\> est disponible… |
 | `update_in_progress` | Update in progress | Mise à jour en cours |
 | `settings_check_update` | Check for updates | Vérifier les mises à jour |
 | `update_check_up_to_date` | You're up to date | Vous êtes à jour |
 | `update_check_error_title` | Update check | Vérification des mises à jour |
 | `update_check_ok` | OK | OK |
 | `action_update` | Update | Mettre à jour |
-| `action_cancel` | Cancel | Annuler (reuse if already present) |
-
-Add locales the app already ships; do not invent a full i18n pass.
+| `action_cancel` | Cancel | Annuler |
 
 ---
 
-## 6. Optional Scora extras
+## 5. Optional Scora extras
 
-Use only when the product needs them:
+| Extra | When |
+|---|---|
+| Prefer **IMMEDIATE**, else flexible | Forced / high-priority updates |
+| Shared manager phone + Wear | Dual APK |
+| `inAppUpdatePriority: 5` on Play upload | Help Play allow IMMEDIATE |
 
-| Extra | When | Where |
-|---|---|---|
-| Prefer **IMMEDIATE**, else flexible, else Play Store URL | Forced / high-priority updates | Scora `InAppUpdateManager.startUpdateFlow` |
-| Shared manager phone + Wear | Dual APK / Wear companion | Scora `shared/.../InAppUpdateManager.kt` |
-| Defer check while critical UX runs | e.g. live match | `isMatchInProgress` gate |
-| `inAppUpdatePriority: 5` on Play upload | Help Play allow IMMEDIATE | release workflow `upload-google-play` input |
-
-Phone-only GeoKing apps (Arthur, Gaston, Vincent-style): **skip** this section. Settings manual check is **default** (section 4), not a Scora extra.
+Phone-only GeoKing apps: **skip** this section.
 
 ---
 
 ## Agent rules
 
-- Prefer **Gaston** for helper/startup; **Arthur** for Settings manual check + feedback.
-- Do not drag Wear/match/IMMEDIATE code into phone-only apps.
-- Deps alone are not enough — Activity + Compose dialog + Settings row + auto-complete required.
-- Updates only work for **Play-installed** builds (internal/closed/production). Sideload / debug: API no-ops or errors; fail soft (manual shows Error / UpToDate).
-- Never block first frame on the update Task; check async after UI is up.
+- Edit the library in **geoking-tools** — do not fork `InAppUpdateHelper` into apps.
+- Prefer **Gaston** for startup + AA extra; **Arthur** for Settings manual check + feedback.
+- Deps alone are not enough — Activity + notification tap + dialog + Settings + auto-complete required.
+- Updates only work for **Play-installed** builds. Sideload / debug: fail soft.
+- Never block first frame on the update Task.
 - Do not commit secrets or change Play track config unless asked.
 
 ## Verify
 
 1. Install from Play internal track (version N).
 2. Upload N+1 to the same track.
-3. Cold start N → dialog → Update → download indicator → app restarts on N+1.
-4. Cancel once → no auto re-prompt until process death.
-5. Settings → Check for updates → dialog if N+1 available; else “You're up to date”.
-6. After Cancel, Settings check still re-prompts when an update is available.
-7. Sideload debug APK → no crash (gate or soft failure / Error feedback).
+3. Cold start N → dialog **and** notification.
+4. Tap notification → flexible update starts (no dialog).
+5. Cold start → dialog → Update → download indicator → restart on N+1.
+6. Cancel once → no auto re-prompt until process death; Settings check still re-prompts.
+7. Sideload debug APK → no crash.
