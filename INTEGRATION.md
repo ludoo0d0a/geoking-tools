@@ -337,10 +337,10 @@ Chaque app ne contient que ~15 lignes YAML ; la logique build/release vit dans g
 
 | Événement | Workflow | Résultat |
 |---|---|---|
-| Push / PR `main` | `android-ci.yml` | APK debug en artefact |
-| Push `main` | `release-play.yml` | AAB → piste **internal** |
+| Push `main` | `release-play.yml` | Unit tests + AAB → piste **internal** |
 | Tag `v*` | `release-play.yml` | `versionName` = nom du tag |
 | `workflow_dispatch` | `release-play.yml` | Choix de piste Play |
+| `workflow_dispatch` | `android-ci.yml` | APK debug / lint (manuel ; plus de push/PR auto) |
 
 **allowOneBuildAtOnce / cancelPreviousRunningBuild** — défini dans
 [geoking-ci](https://github.com/ludoo0d0a/geoking-ci) (`concurrency` +

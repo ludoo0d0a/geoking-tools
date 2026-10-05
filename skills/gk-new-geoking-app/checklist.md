@@ -40,8 +40,8 @@ Use with the `gk-new-geoking-app` skill. Tick in order.
 
 ## CI / tracks
 
-- [ ] `android-ci` green on `main`
-- [ ] `release-play` → internal **completed**
+- [ ] `release-play` → internal **completed** (unit tests run in this workflow)
+- [ ] `android-ci` optional via `workflow_dispatch` (not required on `main`)
 - [ ] Testers list + opt-in URL works
 - [ ] Production left **draft** (unless public requested)
 - [ ] `playConsole.release.tracks` updated in manifest

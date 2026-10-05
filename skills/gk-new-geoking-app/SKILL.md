@@ -44,7 +44,7 @@ Resolve tools: sibling `../geoking-tools` or `$GK_TOOLS`. Layout:
 - [ ] 5. Keystore + Play SA + GitHub secrets (setup-release.sh)
 - [ ] 6. Play Console app + fill project.manifest + playConsole
 - [ ] 7. Listing assets + data_safety.csv
-- [ ] 8. Push main → android-ci + release-play (internal)
+- [ ] 8. Push main → release-play (internal; unit tests included)
 - [ ] 9. Internal testers + opt-in install verified
 - [ ] 10. (Optional) production draft / send for review
 ```
@@ -216,7 +216,7 @@ python3 "$GK_TOOLS/playstore-listing/play_console.py" apply-data-safety
 ## Phase 8 — First CI publish (internal)
 
 1. Commit + push `main`.
-2. Watch Actions: `android-ci` (debug APK) + `release-play` (AAB → **internal**, status completed).
+2. Watch Actions: `release-play` (unit tests + AAB → **internal**, status completed). `android-ci` is dispatch-only (optional manual debug APK).
 3. `versionCode` = `github.run_number`; bump locally only when needed; never reuse a code Play already has.
 4. If upload fails with duplicate versionCode, bump via empty commit or `workflow_dispatch` after fixing versioning — do not force-overwrite.
 
