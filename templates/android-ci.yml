@@ -3,15 +3,58 @@ name: Android CI
 on:
   workflow_dispatch:
 
-# Caller-side allowOneBuildAtOnce (also enforced inside geoking-ci reusable workflows).
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Project-scoped secrets → env. Kept here, not in geoking-ci.
+env:
+  GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+  WEB_CLIENT_ID: ${{ secrets.WEB_CLIENT_ID }}
+  # Add any Gradle API keys this app needs, e.g.:
+  # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  # REVENUECAT_API_KEY: ${{ secrets.REVENUECAT_API_KEY }}
+
 jobs:
   build:
-    uses: ludoo0d0a/geoking-ci/.github/workflows/android-ci.yml@main
-    with:
-      artifact_name: MYAPP-debug-apk   # ← renommer (ex. scora-debug-apk)
-      gradle_version: wrapper
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout geoking-ci
+        uses: actions/checkout@v4
+        with:
+          repository: ludoo0d0a/geoking-ci
+          path: geoking-ci
+
+      - name: Checkout geoking-tools
+        uses: actions/checkout@v4
+        with:
+          repository: ludoo0d0a/geoking-tools
+          path: geoking-tools
+
+      - name: Setup Gradle
+        uses: ./geoking-ci/actions/gk-setup-gradle
+        with:
+          gradle-version: wrapper
+          java-version: '21'
+
+      - name: Write google-services.json (optional on fork PRs)
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "GOOGLE_SERVICES_JSON not set; assemble without Firebase."
+            exit 0
+          fi
+          bash geoking-ci/scripts/write-google-services.sh composeApp/google-services.json
+
+      - name: Assemble debug APK
+        env:
+          GK_TOOLS: ${{ github.workspace }}/geoking-tools
+        run: ./gradlew :composeApp:assembleDebug --no-daemon --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MYAPP-debug-apk   # ← renommer (ex. scora-debug-apk)
+          path: composeApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn

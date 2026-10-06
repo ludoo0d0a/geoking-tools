@@ -63,5 +63,5 @@ Without **testing tracks** and/or **production** release permissions, `edits.tra
 
 - Listing CLI: [`listing_cli.py`](./listing_cli.py)
 - App integration: [`../INTEGRATION.md`](../INTEGRATION.md)
-- Reusable Play upload workflow: [geoking-ci `release-play.yml`](https://github.com/ludoo0d0a/geoking-ci/blob/main/.github/workflows/release-play.yml)
+- Play upload action: [geoking-ci `gk-release-play`](https://github.com/ludoo0d0a/geoking-ci/blob/main/actions/gk-release-play/action.yml)
 - Scora-specific copy + Console links: [scora `doc/playstore/service-account-permissions.md`](https://github.com/ludoo0d0a/scora/blob/main/doc/playstore/service-account-permissions.md)

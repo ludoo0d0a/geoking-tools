@@ -435,7 +435,7 @@ Omet l'étape `gemini` du wizard ; le secret CI est optionnel si `build.gradle.k
 | Google Sign-In échoue en local | SHA-1 debug manquant dans Firebase/GCP → `./scripts/verify-oauth.sh` |
 | Sign-In : `aucun jeton Google reçu` / `WEB_CLIENT_ID` obsolète | `google-services.json` périmé → `./scripts/pull-google-services.sh` (re-télécharge + resynchronise `WEB_CLIENT_ID`) |
 | Google Sign-In échoue sur Play | SHA-1 **App signing** (pas upload) dans Firebase → Play Console → Intégrité |
-| `release-play.yml n'injecte PAS WEB_CLIENT_ID` | Le workflow doit utiliser `geoking-ci` avec `secrets: inherit` |
+| `release-play.yml n'injecte PAS WEB_CLIENT_ID` | Mapper `WEB_CLIENT_ID: ${{ secrets.WEB_CLIENT_ID }}` dans l'`env:` du workflow app (pas dans geoking-ci) |
 | AAB rejeté (signature) | `./scripts/build-aab.sh` compare l'empreinte avant upload |
 | Actions minutes / crédits épuisés | `./scripts/build-and-publish.sh` (même flux que geoking-ci, upload Play API local) |
 

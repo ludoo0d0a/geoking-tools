@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   deploy:
-    uses: ludoo0d0a/geoking-ci/.github/workflows/cloudflare-pages.yml@main
+    uses: ludoo0d0a/geoking-ci/.github/workflows/gk-cloudflare-pages.yml@main
     with:
       pages_project_name: MYAPP
     secrets: inherit

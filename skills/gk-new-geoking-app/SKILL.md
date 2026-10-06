@@ -108,7 +108,7 @@ Agent must then:
 1. Via **gk-project-manifest** / `./scripts/project-manifest.sh apply` — set
    `build.gradleModule` / `googleServices` / `mainActivity` (or `--module :androidApp`)
    to match the scaffold.
-2. Patch `release-play.yml` `package_name` and `android-ci.yml` `artifact_name`.
+2. Patch `release-play.yml` `package_name`, `android-ci.yml` artifact name, and the app `env:` secret mappings.
 3. If module ≠ `:composeApp`, set workflow `gradle_module`, `apk_glob`, `aab_glob` (see INTEGRATION.md).
 4. Apply Gradle signing + `VERSION_CODE`/`VERSION_NAME` + BuildConfig secrets from **gk-ci** / INTEGRATION §4 (env-based keystore; never commit `.keystore`).
 5. Listing / Play Console entrypoints come from `link-scripts.sh` (`./scripts/listing-cli.sh`, `./scripts/play-console.sh`). No app-local stubs.

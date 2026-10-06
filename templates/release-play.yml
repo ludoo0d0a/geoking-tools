@@ -16,21 +16,37 @@ on:
         default: false
         type: boolean
 
-# Caller-side allowOneBuildAtOnce (also enforced inside geoking-ci reusable workflows).
 concurrency:
   group: play-release
   cancel-in-progress: true
 
+# Project-scoped secrets → env. Kept here, not in geoking-ci.
+env:
+  KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 || secrets.SIGNING_KEY }}
+  KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || secrets.KEY_STORE_PASSWORD }}
+  KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.ALIAS }}
+  KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+  PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON || secrets.SERVICE_ACCOUNT_JSON }}
+  GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+  WEB_CLIENT_ID: ${{ secrets.WEB_CLIENT_ID }}
+  # Add any Gradle API keys this app needs, e.g.:
+  # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  # REVENUECAT_API_KEY: ${{ secrets.REVENUECAT_API_KEY }}
+
 jobs:
   release:
-    uses: ludoo0d0a/geoking-ci/.github/workflows/release-play.yml@main
-    with:
-      package_name: fr.geoking.MYAPP   # ← remplacer
-      gradle_version: wrapper
-      # Optional: override default ${gradle_module}:testDebugUnitTest
-      # unit_test_tasks: ':shared:testDebugUnitTest :composeApp:testDebugUnitTest'
-      is_workflow_dispatch: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
-      workflow_dispatch_track: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.track || '' }}
-      workflow_dispatch_skip_review: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.changesNotSentForReview == 'true' && 'true' || 'false' }}
-      version_name_override: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Release to Play
+        uses: ludoo0d0a/geoking-ci/actions/gk-release-play@main
+        with:
+          package_name: fr.geoking.MYAPP   # ← remplacer
+          gradle_version: wrapper
+          # Optional: override default ${gradle_module}:testDebugUnitTest
+          # unit_test_tasks: ':shared:testDebugUnitTest :composeApp:testDebugUnitTest'
+          is_workflow_dispatch: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          workflow_dispatch_track: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.track || '' }}
+          workflow_dispatch_skip_review: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.changesNotSentForReview == 'true' && 'true' || 'false' }}
+          version_name_override: ${{ github.ref_type == 'tag' && github.ref_name || '' }}

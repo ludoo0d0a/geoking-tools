@@ -45,7 +45,7 @@ echo "  → complète Play/Firebase IDs : ./scripts/project-manifest.sh apply --
 # --- CI ---
 if [ ! -f .github/workflows/android-ci.yml ]; then
   cp "$TOOLS/templates/android-ci.yml" .github/workflows/android-ci.yml
-  echo "✓ .github/workflows/android-ci.yml — édite artifact_name"
+  echo "✓ .github/workflows/android-ci.yml — édite artifact name + env secrets"
 else
   echo "· android-ci.yml existe déjà"
 fi

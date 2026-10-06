@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Local Play Store release when GitHub Actions is unavailable (e.g. no Actions minutes).
-# Mirrors geoking-ci release-play.yml: unit tests → signed AAB → whatsnew → Play upload.
+# Mirrors geoking-ci actions/gk-release-play: unit tests → signed AAB → whatsnew → Play upload.
 #
 # Usage (from an app via thin wrapper):
 #   ./scripts/build-and-publish.sh                 # defaults: -y --track internal
@@ -78,7 +78,7 @@ esac
 head_ "Release Play local  ·  $APP_ID"
 info_box \
   "Fallback quand la CI GitHub Actions est indisponible (crédits)." \
-  "Même chemin que geoking-ci/release-play.yml : tests → AAB → Play."
+  "Même chemin que geoking-ci/actions/gk-release-play : tests → AAB → Play."
 
 # --- service account ---
 SA_FILE="$(gk_play_sa_json_path)" \

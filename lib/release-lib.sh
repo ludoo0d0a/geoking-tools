@@ -219,16 +219,16 @@ gk_check_web_client_id() {
 
 gk_check_ci_web_client_id() {
   local workflow="$ROOT/.github/workflows/release-play.yml"
-  if grep -q 'WEB_CLIENT_ID: \${{ secrets.WEB_CLIENT_ID }}' "$workflow" 2>/dev/null; then
-    ok "Workflow release-play.yml injecte WEB_CLIENT_ID"
-  elif grep -q 'geoking-ci/.github/workflows/release-play.yml' "$workflow" 2>/dev/null \
-       && grep -q 'secrets: inherit' "$workflow" 2>/dev/null; then
-    ok "Workflow release-play.yml délègue à geoking-ci (secrets: inherit → WEB_CLIENT_ID)"
+  if grep -qE 'WEB_CLIENT_ID: \$\{\{ secrets\.(WEB_CLIENT_ID|GOOGLE_WEB_CLIENT_ID)' "$workflow" 2>/dev/null; then
+    ok "Workflow release-play.yml injecte WEB_CLIENT_ID (env app)"
+  elif grep -q 'geoking-ci/actions/gk-release-play' "$workflow" 2>/dev/null \
+       && grep -qE 'WEB_CLIENT_ID: \$\{\{ secrets\.' "$workflow" 2>/dev/null; then
+    ok "Workflow release-play.yml appelle gk-release-play avec WEB_CLIENT_ID en env"
   else
     fail "release-play.yml n'injecte PAS WEB_CLIENT_ID"
     return 1
   fi
-  if git show origin/main:.github/workflows/release-play.yml 2>/dev/null | grep -qE 'WEB_CLIENT_ID|geoking-ci/.github/workflows/release-play'; then
+  if git show origin/main:.github/workflows/release-play.yml 2>/dev/null | grep -qE 'WEB_CLIENT_ID|geoking-ci/actions/gk-release-play'; then
     ok "origin/main contient la config release Play"
   else
     warn "origin/main sans config release à jour — build Play actuel peut être cassé"

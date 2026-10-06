@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   screenshots:
-    uses: ludoo0d0a/geoking-ci/.github/workflows/website-screenshots.yml@main
+    uses: ludoo0d0a/geoking-ci/.github/workflows/gk-website-screenshots.yml@main
     with:
       screenshot_locales: ${{ github.event.inputs.screenshot_locales || 'en,fr' }}
       copy_only: ${{ github.event.inputs.copy_only || 'false' }}
