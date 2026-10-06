@@ -1,0 +1,25 @@
+---
+description: Gaston, Arthur, Vincent share geoking-ci CI/CD and geoking-tools components
+alwaysApply: true
+---
+
+# GeoKing shared apps (gaston / arthur / vincent)
+
+These three product apps share the same Android CI/CD and tooling stack:
+
+| App | Path | Gradle app module |
+|-----|------|-------------------|
+| **gaston** | `~/dev/android/_auto/gaston` | `:androidApp` |
+| **arthur** | `~/dev/android/arthur` | `:androidApp` |
+| **vincent** | `~/dev/android/vincent` | `:composeApp` |
+
+## Shared infrastructure
+
+- **geoking-ci** (`~/dev/android/geoking-ci`) — reusable GitHub Actions (`gk-release-play`, `gk-setup-gradle`, scripts). App workflows call these; secrets stay in each app’s `.github/workflows/*.yml` `env:`.
+- **geoking-tools** (`~/dev/android/geoking-tools`) — shared Gradle libs, templates, listing/release scripts, Cursor skills (`gk-*`). Apps consume via `includeBuild` / checkout / `GK_TOOLS`.
+
+## When changing shared behavior
+
+- A fix or convention that belongs in **CI templates, release scripts, BuildConfig flags, Play listing, or shared UI libs** should be considered for **all three apps**, not only the one open in the workspace.
+- Prefer fixing once in **geoking-tools** / **geoking-ci**, then aligning callers (workflows, `build.gradle.kts`) in each app.
+- App-specific secrets and package names stay per-repo; do not move them into geoking-ci.
