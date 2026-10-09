@@ -749,62 +749,96 @@ private fun LogItem(log: NetworkLog, onClick: () -> Unit) {
 @Composable
 private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
     var fullscreenBody by remember { mutableStateOf<String?>(null) }
+    val statusLabel = log.statusCode?.toString() ?: "ERR"
+    val statusColor = when (log.statusCode) {
+        in 200..299 -> Color(0xFF4ADE80)
+        in 400..499 -> Color(0xFFFACC15)
+        in 500..599 -> Color(0xFFF87171)
+        else -> Color.Gray
+    }
+    val sizeLabel = remember(log.requestSizeBytes, log.responseSizeBytes) {
+        formatTransferSizes(log.requestSizeBytes, log.responseSizeBytes)
+    }
+    val timeLabel = remember(log.timestamp) {
+        SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date(log.timestamp))
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
         },
-        title = {
-            Text("Request details", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        },
+        title = null,
         text = {
             SelectionContainer {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     item {
-                        DetailSection("General")
-                        DetailItem("URL", log.url)
-                        DetailItem("Method", log.method)
-                        DetailItem("Status", log.statusCode?.toString() ?: "N/A")
-                        DetailItem("Duration", "${log.durationMs}ms")
-                        DetailItem("Time", Date(log.timestamp).toString())
-                        if (log.requestSizeBytes > 0 || log.responseSizeBytes > 0) {
-                            DetailItem(
-                                "Size",
-                                buildString {
-                                    if (log.requestSizeBytes > 0) {
-                                        append("↑ ${formatBytes(log.requestSizeBytes)}")
-                                    }
-                                    if (log.requestSizeBytes > 0 && log.responseSizeBytes > 0) {
-                                        append("  ")
-                                    }
-                                    if (log.responseSizeBytes > 0) {
-                                        append("↓ ${formatBytes(log.responseSizeBytes)}")
-                                    }
-                                }
+                        // Compact summary: POST https://… 403 (120ms)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = log.method,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = statusLabel,
+                                color = statusColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "(${log.durationMs}ms)",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                            if (sizeLabel.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = sizeLabel,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = timeLabel,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
                             )
                         }
+                        Text(
+                            text = log.url,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
 
                         val queryParams = remember(log.url) { log.queryParams }
                         if (queryParams.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            DetailSection("Query parameters")
+                            Spacer(modifier = Modifier.height(10.dp))
+                            DetailSection("Query")
                             queryParams.forEach { (k, v) ->
                                 val joinedValue = v.joinToString(", ")
                                 val jsonElement = remember(joinedValue) {
                                     try { Json.parseToJsonElement(joinedValue) } catch (_: Exception) { null }
                                 }
                                 if (jsonElement != null && (jsonElement is JsonObject || jsonElement is JsonArray)) {
-                                    Row(modifier = Modifier.padding(vertical = 2.dp)) {
-                                        Text(
-                                            text = "$k: ",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp
-                                        )
-                                    }
+                                    Text(
+                                        text = "$k:",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(top = 2.dp),
+                                    )
                                     JsonTree(
                                         jsonElement = jsonElement,
-                                        modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp)
+                                        modifier = Modifier.padding(start = 8.dp, top = 2.dp, bottom = 4.dp)
                                     )
                                 } else {
                                     DetailItem(k, joinedValue)
@@ -812,7 +846,7 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         CollapsibleDetailSection(
                             title = "Request headers",
                             initiallyExpanded = false
@@ -826,7 +860,7 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
 
                         val reqBody = remember(log.id, log.requestBody) { log.safeRequestBody }
                         if (reqBody.isNotBlank() || log.requestSizeBytes > 0) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             val reqTitle = if (log.requestSizeBytes > 0) {
                                 "Request body (${formatBytes(log.requestSizeBytes)})"
                             } else {
@@ -845,7 +879,7 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
                         }
 
                         log.responseHeaders?.let { headers ->
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             CollapsibleDetailSection(
                                 title = "Response headers",
                                 initiallyExpanded = false
@@ -860,7 +894,7 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
 
                         val respBody = remember(log.id, log.responseBody) { log.safeResponseBody }
                         if (respBody.isNotBlank() || log.responseSizeBytes > 0) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             val respTitle = if (log.responseSizeBytes > 0) {
                                 "Response body (${formatBytes(log.responseSizeBytes)})"
                             } else {
