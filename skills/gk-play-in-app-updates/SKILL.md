@@ -47,7 +47,7 @@ This skill lives in `geoking-tools/skills/gk-play-in-app-updates/`.
 - [ ] 3. Compose UpdateAvailableDialog (skip when autoStartUpdate) + in-progress indicator
 - [ ] 4. Settings “Check for updates” + up-to-date / error feedback dialogs
 - [ ] 5. EN (+ FR) strings + POST_NOTIFICATIONS permission
-- [ ] 6. Optional: AA HUN via onUpdateAvailableExtra (Gaston); IMMEDIATE / Wear (Scora)
+- [ ] 6. Optional: AA via CarAppExtender on the same notif (Gaston); IMMEDIATE / Wear (Scora)
 ```
 
 ## Default decisions (phone)
@@ -137,6 +137,7 @@ data class UpdateNotificationSpec(
     message: String,
     launchActivityClass: Class<out Activity>,
     notificationId: Int = …,
+    configureBuilder: (NotificationCompat.Builder) -> Unit = {}, // e.g. CarAppExtender
 )
 ```
 
@@ -160,7 +161,8 @@ private val inAppUpdateHelper by lazy {
             message = getString(R.string.update_available_message),
             launchActivityClass = MainActivity::class.java,
         ),
-        // Gaston only: onUpdateAvailableExtra = { notificationHelper.showUpdateAvailableCarNotification() },
+        // Gaston: add CarAppExtender via configureBuilder (one notif for phone + AA).
+        // Do not also call a separate CarNotificationManager update notif.
     )
 }
 
@@ -209,9 +211,10 @@ permission is denied (request at a suitable UX moment if desired).
 ## 4. UI + strings
 
 1. **Dialog** — Material 3; Cancel + Update. Skip when `autoStartUpdate`.
-2. **In progress** — non-blocking banner / top-bar text (`update_in_progress`).
+2. **In progress** — full-width banner **above** current screens (`UpdateInProgressBanner`), not top-bar title text (cramped → vertical glyphs).
 3. **Settings row** — `settings_check_update` → `checkForUpdate(manual = true)`.
 4. **Manual feedback** — `UpToDate` / `Error` → one-button OK; `resetCheckFeedback()`.
+5. **Notification** — **one** shade entry (library notifier). Apps with Android Auto add `CarAppExtender` via `UpdateNotificationSpec.configureBuilder`; do **not** post a second car-only notification.
 
 | Key | EN | FR |
 |---|---|---|

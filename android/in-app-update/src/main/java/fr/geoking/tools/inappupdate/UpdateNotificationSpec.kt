@@ -2,10 +2,14 @@ package fr.geoking.tools.inappupdate
 
 import android.app.Activity
 import androidx.annotation.DrawableRes
+import androidx.core.app.NotificationCompat
 
 /**
  * App-supplied copy + target activity for the shared “update available” notification.
  * Tap opens [launchActivityClass] with [InAppUpdateIntents.EXTRA_START_UPDATE]=true.
+ *
+ * Use [configureBuilder] for app-specific extras (e.g. [androidx.car.app.notification.CarAppExtender])
+ * so phone + car share **one** notification instead of posting a second one.
  */
 data class UpdateNotificationSpec(
     val channelId: String,
@@ -15,6 +19,7 @@ data class UpdateNotificationSpec(
     val message: String,
     val launchActivityClass: Class<out Activity>,
     val notificationId: Int = DEFAULT_NOTIFICATION_ID,
+    val configureBuilder: (NotificationCompat.Builder) -> Unit = {},
 ) {
     companion object {
         const val DEFAULT_NOTIFICATION_ID = 0x6B5F_5570 // "gkUp"

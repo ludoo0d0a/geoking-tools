@@ -40,7 +40,7 @@ class UpdateAvailableNotifier(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val notification = NotificationCompat.Builder(context, spec.channelId)
+        val builder = NotificationCompat.Builder(context, spec.channelId)
             .setSmallIcon(spec.smallIcon)
             .setContentTitle(spec.title)
             .setContentText(spec.message)
@@ -48,9 +48,9 @@ class UpdateAvailableNotifier(
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
-            .build()
+        spec.configureBuilder(builder)
 
-        notificationManager.notify(spec.notificationId, notification)
+        notificationManager.notify(spec.notificationId, builder.build())
     }
 
     fun cancel() {
