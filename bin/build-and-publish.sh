@@ -134,8 +134,28 @@ case "$BUNDLE_TASK" in
   *:*) BUNDLE_GRADLE_TASK="$BUNDLE_TASK" ;;
   *)   BUNDLE_GRADLE_TASK="${GRADLE_MODULE}:${BUNDLE_TASK}" ;;
 esac
-AAB_GLOB="${GRADLE_AAB_GLOB:-$MODULE_PATH/build/outputs/bundle/release/${MODULE_PATH}-release.aab}"
+# Aggregate tasks like bundleRelease build every flavor but do not write
+# bundle/release/*.aab — that path is often a stale pre-flavor artifact.
+if [ -z "${GRADLE_AAB_GLOB:-}" ]; then
+  case "$BUNDLE_TASK" in
+    *Playstore*|*playstore*)
+      AAB_GLOB="$MODULE_PATH/build/outputs/bundle/playstoreRelease/*.aab"
+      ;;
+    *Full*|*full*)
+      AAB_GLOB="$MODULE_PATH/build/outputs/bundle/fullRelease/*.aab"
+      ;;
+    bundleRelease|bundleDebug)
+      die "build.bundleTask='$BUNDLE_TASK' is an aggregate (all flavors). Set build.bundleTask + build.aabGlob in scripts/project.manifest.json (e.g. bundlePlaystoreRelease + androidApp/build/outputs/bundle/playstoreRelease/*.aab)."
+      ;;
+    *)
+      AAB_GLOB="$MODULE_PATH/build/outputs/bundle/release/${MODULE_PATH}-release.aab"
+      ;;
+  esac
+else
+  AAB_GLOB="$GRADLE_AAB_GLOB"
+fi
 AAB=""
+BUILD_STARTED_AT="$(date +%s)"
 
 # Resolve upload keystore: release.keystore, else legacy <app>-app.keystore, else KEYSTORE_FILE env.
 if [ ! -f "$KS_PATH" ]; then
@@ -224,12 +244,35 @@ else
     AAB="$1"
   fi
   [ -n "$AAB" ] && [ -f "$AAB" ] || die "AAB non produit (glob : $AAB_GLOB)."
+  AAB_VARIANT="$(basename "$(dirname "$AAB")")"
+  if [ "$AAB_VARIANT" = "release" ] || [ "$AAB_VARIANT" = "debug" ]; then
+    die "AAB résolu sous bundle/${AAB_VARIANT}/ ($AAB) — souvent un artefact obsolète. Configure build.bundleTask/aabGlob (ex. playstoreRelease)."
+  fi
+  AAB_MTIME="$(stat -f %m "$AAB" 2>/dev/null || stat -c %Y "$AAB" 2>/dev/null || echo 0)"
+  if [ "$AAB_MTIME" -lt "$BUILD_STARTED_AT" ]; then
+    die "AAB plus ancien que ce build ($AAB). Le glob a probablement ciblé un fichier stale — vérifie build.aabGlob."
+  fi
   GOT_SHA1="$(keytool -printcert -jarfile "$AAB" 2>/dev/null \
               | awk -F'SHA1: ' '/SHA1:/{print $2; exit}')"
   if [ "$GOT_SHA1" != "$EXPECT_SHA1" ]; then
     die "Signature DIFFÉRENTE (attendu $EXPECT_SHA1, obtenu ${GOT_SHA1:-?}). Ne pas uploader."
   fi
-  ok "AAB signé conforme : $AAB"
+  # Confirm the AAB embeds VERSION_CODE (not just the env we log at upload time).
+  AAB_VC=""
+  META="$(find "$ROOT/$MODULE_PATH/build/intermediates/merged_manifests" \
+      -type f -path "*${AAB_VARIANT}*" -name output-metadata.json 2>/dev/null | head -1 || true)"
+  if [ -n "$META" ] && [ -f "$META" ]; then
+    AAB_VC="$(jq -r '.elements[0].versionCode // empty' "$META" 2>/dev/null || true)"
+  fi
+  if [[ "$AAB_VC" =~ ^[0-9]+$ ]] && [ "$AAB_VC" != "$VERSION_CODE" ]; then
+    die "AAB versionCode=${AAB_VC} ≠ VERSION_CODE=${VERSION_CODE} (manifest $META). Rebuild requis."
+  fi
+  if [[ "$AAB_VC" =~ ^[0-9]+$ ]]; then
+    ok "AAB signé conforme : $AAB (versionCode=${AAB_VC})"
+  else
+    ok "AAB signé conforme : $AAB"
+    warn "Impossible de lire versionCode dans les intermediates — upload avec VERSION_CODE=${VERSION_CODE} déclaré."
+  fi
 fi
 
 # --- whatsnew ---
