@@ -21,6 +21,10 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TOOLS="$(cd "$HERE/.." && pwd)"
 
+# shellcheck source=../lib/python-env.sh
+. "$TOOLS/lib/python-env.sh"
+gk_python_ensure
+
 # App root: GK_PROJECT_ROOT, or cwd if it looks like an app, or parent of scripts/.
 if [ -n "${GK_PROJECT_ROOT:-}" ]; then
   ROOT="$GK_PROJECT_ROOT"
@@ -38,7 +42,7 @@ SCRIPTS="$ROOT/scripts"
 mkdir -p "$SCRIPTS"
 
 relpath() {
-  python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$1" "$2"
+  "$GK_PYTHON" -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$1" "$2"
 }
 
 # --- unique reference: <app>/geoking-tools (mirror includeBuild) ---

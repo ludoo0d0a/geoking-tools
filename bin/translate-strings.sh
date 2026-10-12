@@ -29,4 +29,4 @@ cd "$I18N"
 if [ -f ./translate.sh ]; then
   exec bash ./translate.sh "$@"
 fi
-exec python3 ./translate.py "$@"
+exec "$GK_PYTHON" ./translate.py "$@"

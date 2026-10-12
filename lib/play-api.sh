@@ -305,7 +305,8 @@ gk_play_universal_apk_download_id() {
 }
 
 gk_urlencode() {
-  python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"
+  # GK_PYTHON set by project-env / gk_python_ensure; fall back to PATH after ensure.
+  "${GK_PYTHON:-python3}" -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"
 }
 
 gk_play_download_universal_apk() {

@@ -13,6 +13,19 @@ These three product apps share the same Android CI/CD and tooling stack:
 | **arthur** | `~/dev/android/arthur` | `:androidApp` |
 | **vincent** | `~/dev/android/vincent` | `:composeApp` |
 
+## JDK 21 (mandatory)
+
+**Always JDK 21** for gaston, arthur, vincent, **geoking-tools**, and **geoking-ci**. Never pin or run Gradle/AGP/Kotlin on JDK 25 (or any newer ambient JDK).
+
+| Knob | Value |
+|------|--------|
+| `mise.toml` | `java = "21"` |
+| `gradle/gradle-daemon-jvm.properties` | `toolchainVersion=21` only |
+| CI (`gk-setup-gradle` / `setup-java`) | `java-version: "21"` (default) |
+| Local runs | `export JAVA_HOME="$(mise where java)"` then `./gradlew` |
+
+Do **not** run `updateDaemonJvm` without `--jvm-version=21`. A wrong `toolchainVersion=25` breaks sync (`Expected android module not found` for `includeBuild` modules like `:debug-bar`) and daemon startup.
+
 ## Shared infrastructure
 
 - **geoking-ci** (`~/dev/android/geoking-ci`) — reusable GitHub Actions (`gk-release-play`, `gk-setup-gradle`, scripts). App workflows call these; secrets stay in each app’s `.github/workflows/*.yml` `env:`.

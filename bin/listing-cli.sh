@@ -13,4 +13,4 @@ set -euo pipefail
 gk_project_init
 cd "$ROOT"
 
-exec python3 "$GK_TOOLS/playstore-listing/listing_cli.py" "$@"
+exec "$GK_PYTHON" "$GK_TOOLS/playstore-listing/listing_cli.py" "$@"

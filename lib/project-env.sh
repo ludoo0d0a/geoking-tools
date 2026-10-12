@@ -8,6 +8,8 @@ GK_PROJECT_ENV_LOADED=1
 _LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=resolve.sh
 . "$_LIB_DIR/resolve.sh"
+# shellcheck source=python-env.sh
+. "$_LIB_DIR/python-env.sh"
 # shellcheck source=manifest.sh
 . "$_LIB_DIR/manifest.sh"
 # shellcheck source=release-lib.sh
@@ -19,6 +21,8 @@ gk_project_init() {
 
   GK_TOOLS="$(gk_tools_resolve "$ROOT")"
   export GK_TOOLS ROOT SCRIPTS
+
+  gk_python_ensure
 
   if [ -z "${GK_MANIFEST_LOADED:-}" ]; then
     GK_MANIFEST_LOADED=1

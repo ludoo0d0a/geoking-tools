@@ -288,7 +288,7 @@ for c in "$GK_TOOLS/bin/whatsnew.py" "$SCRIPTS/whatsnew.py"; do
   break
 done
 [ -n "$WHATSNEW_PY" ] || die "whatsnew.py introuvable"
-GK_PROJECT_ROOT="$ROOT" python3 "$WHATSNEW_PY" "$VERSION_CODE"
+GK_PROJECT_ROOT="$ROOT" "$GK_PYTHON" "$WHATSNEW_PY" "$VERSION_CODE"
 ok "playstore/whatsnew/ généré"
 
 if [ "$DRY_RUN" = true ]; then
