@@ -3,9 +3,9 @@ name: gk-debug-bar
 description: >-
   Add a floating "bug" debug button that opens a full HTTP / provider traffic
   inspector overlay for a GeoKing Android phone app. Uses the shared Compose
-  library fr.geoking.tools:debug-bar from geoking-tools (includeBuild). Use when
-  adding a debug bar, network inspector, HTTP logger, floating bug button,
-  gk-debug-bar, DebugLogOverlay, or FloatingDebugBar.
+  library fr.geoking.tools:debug-bar from geoking-tools (same-build include +
+  projectDir). Use when adding a debug bar, network inspector, HTTP logger,
+  floating bug button, gk-debug-bar, DebugLogOverlay, or FloatingDebugBar.
 ---
 
 # HTTP debug bar (floating bug button)
@@ -45,21 +45,25 @@ Library-only CI lives in `geoking-tools/.github/workflows/debug-bar.yml` (`:debu
 ├── geoking-tools/
 │   └── android/
 │       └── debug-bar/          # Compose library (FAB + overlay)
-├── _auto/gaston/               # includeBuild consumer
+├── _auto/gaston/               # include + projectDir consumer
 └── <app>/
 ```
 
 ## Progress checklist
 
 ```
-- [ ] 1. includeBuild geoking-tools/android + implementation("fr.geoking.tools:debug-bar")
+- [ ] 1. include(":debug-bar") with projectDir + implementation(project(":debug-bar"))
 - [ ] 2. App-side store / interceptor captures network (and optional provider) logs
 - [ ] 3. Thin adapter: map store → library models + wire cache/clear callbacks
 - [ ] 4. Gate behind verbose/developer flag in MainActivity
 - [ ] 5. Do not copy DebugLogOverlay.kt — edit the library in geoking-tools
 ```
 
-## 1. Import the library (includeBuild)
+## 1. Import the library (same-build include)
+
+Use **`include` + `projectDir`**, not `includeBuild`. Android Studio sync fails to map
+composite Android library modules (`Expected android module not found! … Path: :debug-bar`)
+while CLI Gradle still works.
 
 In the app’s `settings.gradle.kts`:
 
@@ -71,24 +75,22 @@ val gkToolsRoot = System.getenv("GK_TOOLS")
         ?.absolutePath
     ?: error("geoking-tools not found; clone sibling or set GK_TOOLS")
 
-includeBuild("$gkToolsRoot/android") {
-    dependencySubstitution {
-        substitute(module("fr.geoking.tools:debug-bar"))
-            .using(project(":debug-bar"))
-    }
-}
+val toolsAndroid = file(gkToolsRoot).resolve("android")
+include(":debug-bar")
+project(":debug-bar").projectDir = toolsAndroid.resolve("debug-bar")
 ```
 
 In the phone module `build.gradle.kts`:
 
 ```kotlin
-implementation("fr.geoking.tools:debug-bar")
+implementation(project(":debug-bar"))
 ```
 
 **Updates:** edit sources under `geoking-tools/android/debug-bar`, then rebuild the app.
-No version bump — composite build compiles from source. Share changes by
-committing/pushing **geoking-tools**; apps only keep the includeBuild lines.
+No version bump — the module compiles from source. Share changes by
+committing/pushing **geoking-tools**; apps only keep the include lines.
 CI: checkout `geoking-tools` next to the app (or set `GK_TOOLS`) before Gradle.
+Standalone library CI still uses `geoking-tools/android`’s own Gradle settings.
 
 ## 2. Public UI API
 
@@ -176,7 +178,8 @@ in release for end users.
 
 ## Agent rules
 
-- **Never copy** the overlay into the app — always depend on `fr.geoking.tools:debug-bar`.
+- **Never copy** the overlay into the app — always depend on `project(":debug-bar")` from geoking-tools.
 - UI changes go in **geoking-tools**; app changes are adapter + capture only.
+- Do **not** use `includeBuild` for these Android libraries (breaks Android Studio sync).
 - Don’t gate behind a flag that is on by default in release builds.
 - Don’t add `material-icons-extended` solely for this in the app — the library already depends on it.

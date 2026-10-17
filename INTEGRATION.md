@@ -142,7 +142,7 @@ my-new-app/
 │   ├── setup-release.sh → …    # idem pour chaque bin public
 │   ├── project.manifest.json   # config spécifique à l'app
 │   └── …
-└── settings.gradle.kts         # includeBuild("$gkToolsRoot/android")
+└── settings.gradle.kts         # include(":debug-bar") + projectDir → …/android/debug-bar
 ```
 
 ### Test

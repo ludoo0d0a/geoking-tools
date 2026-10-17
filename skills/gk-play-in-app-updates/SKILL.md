@@ -2,12 +2,12 @@
 name: gk-play-in-app-updates
 description: >-
   Wire Play In-App Updates for a GeoKing Android phone app via shared
-  fr.geoking.tools:in-app-update (flexible download, update-available
-  notification tap → start update, Compose dialog, auto-complete, Settings
-  manual check). Use when adding auto-update, in-app update, AppUpdateManager,
-  play-app-update, gk-play-in-app-updates, Settings check for updates, or when
-  Release Spine lists Play In-App Updates. Canonical consumers: Gaston + Arthur;
-  Scora for multi-surface / IMMEDIATE preference.
+  geoking-tools android/in-app-update (project(":in-app-update"), flexible
+  download, update-available notification tap → start update, Compose dialog,
+  auto-complete, Settings manual check). Use when adding auto-update, in-app
+  update, AppUpdateManager, play-app-update, gk-play-in-app-updates, Settings
+  check for updates, or when Release Spine lists Play In-App Updates. Canonical
+  consumers: Gaston + Arthur; Scora for multi-surface / IMMEDIATE preference.
 ---
 
 # Play In-App Updates (phone)
@@ -21,7 +21,7 @@ up-to-date / error feedback.
 
 | Piece | Location |
 |---|---|
-| **Shared library** | `geoking-tools/android/in-app-update` → `fr.geoking.tools:in-app-update` |
+| **Shared library** | `geoking-tools/android/in-app-update` → `project(":in-app-update")` |
 | **Gaston** | Canonical consumer (phone notif + AA HUN extra + startup) |
 | **Arthur** | Consumer + **Settings manual check** + feedback dialogs |
 | **Scora** | Phone + Wear manager, IMMEDIATE-first (do not copy into phone-only apps) |
@@ -34,15 +34,15 @@ This skill lives in `geoking-tools/skills/gk-play-in-app-updates/`.
 ~/dev/android/
 ├── geoking-tools/
 │   └── android/in-app-update/   # shared helper + notification
-├── _auto/gaston/                # includeBuild consumer
-├── arthur/                      # includeBuild + Settings manual check
+├── _auto/gaston/                # include + projectDir consumer
+├── arthur/                      # include + projectDir + Settings manual check
 └── <app>/
 ```
 
 ## Progress checklist
 
 ```
-- [ ] 1. includeBuild geoking-tools/android + implementation("fr.geoking.tools:in-app-update")
+- [ ] 1. include(":in-app-update") with projectDir + implementation(project(":in-app-update"))
 - [ ] 2. MainActivity: UpdateNotificationSpec, launcher, consumeLaunchIntent, check once, auto-start
 - [ ] 3. Compose UpdateAvailableDialog (skip when autoStartUpdate) + in-progress indicator
 - [ ] 4. Settings “Check for updates” + up-to-date / error feedback dialogs
@@ -54,7 +54,7 @@ This skill lives in `geoking-tools/skills/gk-play-in-app-updates/`.
 
 | Choice | Default | Notes |
 |---|---|---|
-| Implementation | **`fr.geoking.tools:in-app-update`** | Do not copy helper into the app |
+| Implementation | **`project(":in-app-update")`** | Do not copy helper into the app |
 | Update type | **FLEXIBLE** only | User keeps using the app |
 | When to check | Once in `MainActivity.onCreate` | Not every `onResume` |
 | Notification | On availability | Tap → `EXTRA_START_UPDATE` → `maybeAutoStartUpdate` |
@@ -68,7 +68,10 @@ Do **not** copy Scora’s Wear match-gating or IMMEDIATE preference unless the a
 
 ---
 
-## 1. Import the library (includeBuild)
+## 1. Import the library (same-build include)
+
+Use **`include` + `projectDir`**, not `includeBuild`. Android Studio sync fails to map
+composite Android library modules while CLI Gradle still works.
 
 In the app’s `settings.gradle.kts`:
 
@@ -80,18 +83,15 @@ val gkToolsRoot = System.getenv("GK_TOOLS")
         ?.absolutePath
         ?: error("geoking-tools not found; clone sibling or set GK_TOOLS")
 
-includeBuild("$gkToolsRoot/android") {
-    dependencySubstitution {
-        substitute(module("fr.geoking.tools:in-app-update"))
-            .using(project(":in-app-update"))
-    }
-}
+val toolsAndroid = file(gkToolsRoot).resolve("android")
+include(":in-app-update")
+project(":in-app-update").projectDir = toolsAndroid.resolve("in-app-update")
 ```
 
 Phone module `build.gradle.kts`:
 
 ```kotlin
-implementation("fr.geoking.tools:in-app-update")
+implementation(project(":in-app-update"))
 // Play app-update deps come transitively (api); keep explicit catalog deps if preferred.
 ```
 

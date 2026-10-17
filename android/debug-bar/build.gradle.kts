@@ -26,9 +26,8 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain(21)
-}
+// No kotlin { jvmToolchain } — consumers may set android.builtInKotlin=false (e.g. Vincent
+// KMP+application), where the kotlin {} extension is unavailable on android.library modules.
 
 dependencies {
     implementation("androidx.compose.ui:ui:1.12.1")

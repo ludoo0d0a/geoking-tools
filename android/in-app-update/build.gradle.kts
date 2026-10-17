@@ -5,6 +5,15 @@ plugins {
 group = "fr.geoking.tools"
 version = "1.0.0"
 
+// When included as a subproject of an app with android.builtInKotlin=false (Vincent
+// KMP+application), AGP does not compile Kotlin — apply the classic plugin.
+// With builtInKotlin=true (Arthur/Gaston/default), AGP owns Kotlin; do not apply it.
+val builtInKotlinEnabled =
+    (findProperty("android.builtInKotlin") as String?)?.toBooleanStrictOrNull() ?: true
+if (!builtInKotlinEnabled) {
+    apply(plugin = "org.jetbrains.kotlin.android")
+}
+
 android {
     namespace = "fr.geoking.tools.inappupdate"
     compileSdk = 37
@@ -18,10 +27,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-}
-
-kotlin {
-    jvmToolchain(21)
 }
 
 dependencies {

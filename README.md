@@ -6,7 +6,7 @@ Scripts partagés pour les apps Android GeoKing (release Play, OAuth, adb, build
 > **Manifest ?** → skill **[gk-project-manifest](skills/gk-project-manifest/SKILL.md)** + `./scripts/project-manifest.sh`  
 > **In-App Updates ?** → skill **[gk-play-in-app-updates](skills/gk-play-in-app-updates/SKILL.md)** (Gaston phone pattern)  
 > **Settings / Theme / i18n ?** → **[gk-settings](skills/gk-settings/SKILL.md)** · **[gk-theme](skills/gk-theme/SKILL.md)** · **[gk-i18n](skills/gk-i18n/SKILL.md)**  
-> **Debug bar (Compose) ?** → skill **[gk-debug-bar](skills/gk-debug-bar/SKILL.md)** + library `android/debug-bar` (`fr.geoking.tools:debug-bar`, includeBuild)
+> **Debug bar (Compose) ?** → skill **[gk-debug-bar](skills/gk-debug-bar/SKILL.md)** + library `android/debug-bar` (`project(":debug-bar")`, same-build include)
 
 ## Bootstrap rapide
 
@@ -43,7 +43,7 @@ Ou : `export GK_TOOLS=~/dev/android/geoking-tools`
 
 | Chemin | Rôle |
 |---|---|
-| `geoking-tools` → `../geoking-tools` | Même pointeur que Gradle (`includeBuild("…/android")`) |
+| `geoking-tools` → `../geoking-tools` | Même pointeur que Gradle (`include` + `projectDir` vers `…/android/<module>`) |
 | `scripts/_geoking-wrapper.sh` | Seul vrai script local |
 | `scripts/*.sh` → wrapper | Symlinks (plus de stubs dupliqués) |
 | `scripts/gk` | Dispatcher : `./scripts/gk --list` / `./scripts/gk setup-release` |
@@ -115,7 +115,7 @@ Ne pas confondre avec `templates/project.manifest.json` (catalogue DNS GeoKing).
 | `skills/gk-theme/` | Skill : System / Light / Dark UI theme (Gaston) |
 | `skills/gk-i18n/` | Skill : app string i18n DeepL pipeline (Scora `i18n/` pattern) |
 | `skills/gk-debug-bar/` | Skill : floating HTTP debug overlay via `android/debug-bar` |
-| `android/debug-bar/` | Compose library `fr.geoking.tools:debug-bar` (includeBuild from apps) |
+| `android/debug-bar/` | Compose library consumed as `project(":debug-bar")` (include + projectDir) |
 
 ## DNS geoking.fr (Netlify → Cloudflare)
 
