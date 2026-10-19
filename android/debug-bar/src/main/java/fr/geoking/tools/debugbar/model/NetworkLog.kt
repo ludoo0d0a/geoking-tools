@@ -24,6 +24,8 @@ data class NetworkLog(
     val timestamp: Long,
     val requestSizeBytes: Long = 0,
     val responseSizeBytes: Long = 0,
+    /** True when the response was served from an app-level cache (no network body). */
+    val fromCache: Boolean = false,
 ) {
     val safeRequestBody: String get() = requestBody ?: ""
     val safeResponseBody: String get() = responseBody ?: ""

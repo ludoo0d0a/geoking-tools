@@ -708,6 +708,18 @@ private fun LogItem(log: NetworkLog, onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp
             )
+            if (log.fromCache) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "cached",
+                    color = Color(0xFF0F172A),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    modifier = Modifier
+                        .background(Color(0xFF67E8F9), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "${log.durationMs}ms",
@@ -789,6 +801,18 @@ private fun LogDetailsDialog(log: NetworkLog, onDismiss: () -> Unit) {
                                 fontSize = 13.sp,
                                 fontFamily = FontFamily.Monospace,
                             )
+                            if (log.fromCache) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "cached",
+                                    color = Color(0xFF0F172A),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 10.sp,
+                                    modifier = Modifier
+                                        .background(Color(0xFF67E8F9), RoundedCornerShape(999.dp))
+                                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "(${log.durationMs}ms)",
