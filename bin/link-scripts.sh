@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Link geoking-tools into an app: unique reference + scripts/ entrypoints.
+# Link geoking-tools scripts into an app (wrappers only — no in-app symlink).
 #
-# Same resolution order as includeBuild (gk-debug-bar):
-#   $GK_TOOLS → <app>/geoking-tools → ../geoking-tools → ../../geoking-tools
+# Resolution order ($GK_TOOLS / sibling / CI checkout):
+#   $GK_TOOLS → ../geoking-tools → ../../geoking-tools → <app>/geoking-tools
 #
 # Usage (from app root):
 #   ../geoking-tools/bin/link-scripts.sh
@@ -10,11 +10,11 @@
 #   GK_TOOLS=/path/to/geoking-tools ../geoking-tools/bin/link-scripts.sh
 #
 # Creates / refreshes:
-#   geoking-tools/          → relative symlink to the tools repo (skipped if real dir)
 #   scripts/_geoking-wrapper.sh
 #   scripts/<bin-script>    → symlink to _geoking-wrapper.sh (basename = command)
 #   scripts/whatsnew.py     ← templates/whatsnew.py (Python stub; not bash wrapper)
 #   scripts/gk              → symlink to _geoking-wrapper.sh  (./scripts/gk --list | <cmd>)
+# Removes a local <app>/geoking-tools symlink if present (duplicates Git roots in Cursor).
 #
 set -euo pipefail
 
@@ -45,18 +45,18 @@ relpath() {
   "$GK_PYTHON" -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$1" "$2"
 }
 
-# --- unique reference: <app>/geoking-tools (mirror includeBuild) ---
+# --- geoking-tools reference ---
+# Prefer the sibling checkout (../geoking-tools). An in-app symlink makes
+# Cursor/VS Code Source Control list the same Git repo twice (workspace path +
+# realpath). Keep a real CI checkout dir; remove any local symlink.
 LINK_PATH="$ROOT/geoking-tools"
 if [ -L "$LINK_PATH" ]; then
-  ln -sfn "$(relpath "$TOOLS" "$ROOT")" "$LINK_PATH"
-  echo "✓ geoking-tools → $(readlink "$LINK_PATH")"
+  rm -f "$LINK_PATH"
+  echo "✓ removed geoking-tools symlink (use sibling / GK_TOOLS)"
 elif [ -d "$LINK_PATH" ]; then
-  echo "· geoking-tools/ est un dossier (checkout CI) — symlink non créé"
+  echo "· geoking-tools/ est un dossier (checkout CI) — conservé"
 elif [ -e "$LINK_PATH" ]; then
   echo "⚠ geoking-tools existe déjà et n'est ni symlink ni dossier — ignoré" >&2
-else
-  ln -s "$(relpath "$TOOLS" "$ROOT")" "$LINK_PATH"
-  echo "✓ geoking-tools → $(readlink "$LINK_PATH")"
 fi
 
 # --- wrapper (single real script in scripts/) ---

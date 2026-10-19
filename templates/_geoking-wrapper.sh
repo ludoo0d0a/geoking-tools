@@ -14,10 +14,10 @@ if [ -n "${GK_TOOLS:-}" ] && [ -d "$GK_TOOLS" ]; then
   TOOLS="$(cd "$GK_TOOLS" && pwd)"
 else
   for _c in \
-    "$ROOT/geoking-tools" \
     "$ROOT/../geoking-tools" \
     "$ROOT/../../geoking-tools" \
-    "$HOME/dev/android/geoking-tools"; do
+    "$HOME/dev/android/geoking-tools" \
+    "$ROOT/geoking-tools"; do
     if [ -d "$_c/bin" ] || [ -d "$_c/android" ]; then
       TOOLS="$(cd "$_c" && pwd)"
       break
