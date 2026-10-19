@@ -131,6 +131,17 @@ class InAppUpdateHelper(
                     return@addOnSuccessListener
                 }
 
+                // Update exists but flexible in-app flow isn't allowed (e.g. Android TV,
+                // or IMMEDIATE-only). Never claim "up to date" — host should open Play Store.
+                if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
+                    if (manual) {
+                        _checkFeedback.value = CheckFeedback.Error(
+                            message = "Open the Play Store to install the update",
+                        )
+                    }
+                    return@addOnSuccessListener
+                }
+
                 if (manual) {
                     _checkFeedback.value = CheckFeedback.UpToDate
                 }

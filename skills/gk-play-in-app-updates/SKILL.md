@@ -66,6 +66,12 @@ This skill lives in `geoking-tools/skills/gk-play-in-app-updates/`.
 
 Do **not** copy Scora’s Wear match-gating or IMMEDIATE preference unless the app is multi-APK / needs forced update.
 
+### Android TV
+
+Play In-App Updates are **not supported on Android TV** (phone / tablet / ChromeOS only). Always-on ambient / Dream also blocks silent Play auto-install while the app stays foreground.
+
+For TV (Arthur): skip `InAppUpdateHelper` flexible flow; Settings → **open `market://details?id=`**; optional soft probe via `AppUpdateInfo` → dialog → Play Store. Never report “up to date” when `UPDATE_AVAILABLE` but flexible isn’t allowed.
+
 ---
 
 ## 1. Import the library (same-build include)
