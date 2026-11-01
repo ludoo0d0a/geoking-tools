@@ -247,9 +247,28 @@ gk_play_edit_commit() {
   if [ "$skip_review" = true ] || [ "$skip_review" = "true" ]; then
     url="${url}?changesNotSentForReview=true"
   fi
-  curl -fsS -X POST "$url" \
-    -H "Authorization: Bearer ${token}" \
-    -H "Content-Type: application/json"
+  local attempt=1 max=4 tmp code
+  while true; do
+    tmp="$(mktemp)"
+    code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST "$url" \
+      -H "Authorization: Bearer ${token}" \
+      -H "Content-Type: application/json")"
+    if [ "$code" = "200" ]; then
+      cat "$tmp"
+      rm -f "$tmp"
+      return 0
+    fi
+    echo "Play edits.commit HTTP ${code} (attempt ${attempt}/${max}):" >&2
+    cat "$tmp" >&2
+    echo >&2
+    rm -f "$tmp"
+    if [ "$attempt" -lt "$max" ] && [[ "$code" =~ ^(429|5[0-9][0-9])$ ]]; then
+      sleep $((attempt * 20))
+      attempt=$((attempt + 1))
+      continue
+    fi
+    return 1
+  done
 }
 
 # High-level: create edit → upload AAB → assign track → commit.
