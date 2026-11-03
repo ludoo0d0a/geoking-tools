@@ -216,6 +216,19 @@ android {
 }
 ```
 
+### Stub a new release (`./scripts/new-release.sh`)
+
+Bump `versionName` (manifest `build.versionNameProperty` in `build.gradle.kts`, else
+`playstore/version.properties`), prepend empty EN/FR changelog stubs, regenerate
+whatsnew (**no** DeepL), and generate the listing pack from existing screenshots:
+
+```bash
+./scripts/new-release.sh           # minor bump X.Y.Z → X.(Y+1).0
+./scripts/new-release.sh 1.2.0     # explicit
+```
+
+Fill changelog bullets afterwards; optional `--translate` via the project whatsnew script.
+
 ### Version Play (`playstore/version.properties`)
 
 ```kotlin
