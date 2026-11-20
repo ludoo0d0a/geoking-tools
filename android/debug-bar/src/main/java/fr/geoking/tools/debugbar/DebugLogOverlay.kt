@@ -58,25 +58,29 @@ fun DebugLogOverlay(
     var isExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        DebugLogOverlayContent(
-            isExpanded = isExpanded,
-            onExpandedChange = { isExpanded = it },
-            logs = logs,
-            providerTraces = providerTraces,
-            hostConsumption = hostConsumption,
-            totalBytesSent = totalBytesSent,
-            totalBytesReceived = totalBytesReceived,
-            disableCache = disableCache,
-            onDisableCacheChange = onDisableCacheChange,
-            onClearCaches = onClearCaches,
-            onClearLogs = onClearLogs,
-            onResetDataConsumption = onResetDataConsumption,
-            detectedCountries = detectedCountries,
-            cacheStats = cacheStats,
-            onRefreshCacheStats = onRefreshCacheStats,
-            customInfo = customInfo,
-            modifier = Modifier.padding(16.dp)
-        )
+        // FAB only when collapsed. Expanded UI lives solely in the Popup —
+        // previously both layers rendered the panel (in-place + popup).
+        if (!isExpanded) {
+            DebugLogOverlayContent(
+                isExpanded = false,
+                onExpandedChange = { isExpanded = it },
+                logs = logs,
+                providerTraces = providerTraces,
+                hostConsumption = hostConsumption,
+                totalBytesSent = totalBytesSent,
+                totalBytesReceived = totalBytesReceived,
+                disableCache = disableCache,
+                onDisableCacheChange = onDisableCacheChange,
+                onClearCaches = onClearCaches,
+                onClearLogs = onClearLogs,
+                onResetDataConsumption = onResetDataConsumption,
+                detectedCountries = detectedCountries,
+                cacheStats = cacheStats,
+                onRefreshCacheStats = onRefreshCacheStats,
+                customInfo = customInfo,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
 
         if (isExpanded) {
             Popup(
