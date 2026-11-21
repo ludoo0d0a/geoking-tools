@@ -240,17 +240,31 @@ gk_play_track_assign() {
     -d "$body"
 }
 
+# Commit a Play edit. On HTTP 400 about changesNotSentForReview, retries once with
+# the opposite query-param (Play Console managed-publishing policy flips either way).
 gk_play_edit_commit() {
   local token="$1" edit="$2"
   local skip_review="${3:-false}"
-  local url="${PLAY_API_BASE}/${APP_ID}/edits/${edit}:commit"
+  local base_url="${PLAY_API_BASE}/${APP_ID}/edits/${edit}:commit"
+  local prefer_skip=false
   if [ "$skip_review" = true ] || [ "$skip_review" = "true" ]; then
-    url="${url}?changesNotSentForReview=true"
+    prefer_skip=true
   fi
-  local attempt=1 max=4 tmp code
+
+  _gk_play_commit_url() {
+    local skip="$1"
+    if [ "$skip" = true ]; then
+      printf '%s?changesNotSentForReview=true' "$base_url"
+    else
+      printf '%s' "$base_url"
+    fi
+  }
+
+  local attempt=1 max=4 tmp code body skip_try flipped=false
+  skip_try="$prefer_skip"
   while true; do
     tmp="$(mktemp)"
-    code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST "$url" \
+    code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST "$(_gk_play_commit_url "$skip_try")" \
       -H "Authorization: Bearer ${token}" \
       -H "Content-Type: application/json")"
     if [ "$code" = "200" ]; then
@@ -258,10 +272,24 @@ gk_play_edit_commit() {
       rm -f "$tmp"
       return 0
     fi
+    body="$(cat "$tmp")"
     echo "Play edits.commit HTTP ${code} (attempt ${attempt}/${max}):" >&2
-    cat "$tmp" >&2
+    printf '%s\n' "$body" >&2
     echo >&2
     rm -f "$tmp"
+
+    if [ "$code" = "400" ] && [ "$flipped" = false ] && \
+      printf '%s' "$body" | grep -q 'changesNotSentForReview'; then
+      if [ "$skip_try" = true ]; then
+        skip_try=false
+      else
+        skip_try=true
+      fi
+      flipped=true
+      echo "Play edits.commit: retrying once with opposite changesNotSentForReview (skip=${skip_try})…" >&2
+      continue
+    fi
+
     if [ "$attempt" -lt "$max" ] && [[ "$code" =~ ^(429|5[0-9][0-9])$ ]]; then
       sleep $((attempt * 20))
       attempt=$((attempt + 1))
